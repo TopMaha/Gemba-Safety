@@ -1,0 +1,39 @@
+{
+  "name": "TENNECO GEMBA SAFETY · ระบบเดินตรวจความปลอดภัย",
+  "short_name": "GEMBA SAFETY",
+  "description": "เดินตรวจความปลอดภัย เปิดใบแจ้งปัญหา มอบหมายให้ผู้จัดการและหัวหน้างานเข้าแก้ไข แล้วแนบรูปหลังแก้กลับมาปิดงาน ใช้งานได้แม้สัญญาณไม่ถึง",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#233d93",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "บันทึกการเดิน (Ad-hoc)",
+      "short_name": "บันทึกการเดิน",
+      "description": "เริ่มบันทึกการเดินโดยไม่ต้องมีแผนล่วงหน้า",
+      "url": "walk/new"
+    },
+    {
+      "name": "ใบแจ้งปัญหาความปลอดภัย",
+      "short_name": "ใบแจ้งปัญหา",
+      "description": "ดูใบแจ้งที่ยังไม่ปิดทั้งหมด",
+      "url": "findings"
+    },
+    {
+      "name": "งานของฉัน",
+      "short_name": "งานของฉัน",
+      "description": "งานแก้ไขที่ถูกมอบหมายให้เรา",
+      "url": "tasks"
+    }
+  ]
+}

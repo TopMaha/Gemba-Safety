@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────────
+   TENNECO blue–white: พื้นขาวอมฟ้า การ์ดขาว หมึกกรมท่า
+   สีหลักคือน้ำเงิน TENNECO (#233D93 ตามโลโก้) · Light = default (ใช้กลางแดด)
+   ok / warn / bad เป็นสีสื่อความหมาย (ผ่าน/เตือน/อันตราย) ไม่ผูกกับแบรนด์ */
+@layer base {
+  :root {
+    --background: 216 38% 97%;
+    --foreground: 226 45% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 226 45% 12%;
+    --muted: 218 36% 93%;
+    --muted-foreground: 224 16% 38%;
+    /* กรมท่าเข้ม — ปุ่มหลักรอง, ป้ายทึบ */
+    --primary: 226 64% 24%;
+    --primary-foreground: 0 0% 100%;
+    /* น้ำเงิน TENNECO — ปุ่มหลัก, ไฮไลต์, ไอคอน */
+    --accent: 226 62% 36%;
+    --accent-foreground: 0 0% 100%;
+    --brand: 226 62% 36%;
+    --ok: 148 58% 30%;
+    --warn: 32 92% 40%;
+    --bad: 358 68% 46%;
+    --steel: 212 26% 40%;
+    --border: 218 28% 86%;
+    --ring: 226 70% 46%;
+    --shadow: 226 50% 22%;
+    --grid: 220 50% 90%;
+  }
+
+  .dark {
+    --background: 226 42% 7%;
+    --foreground: 220 30% 94%;
+    --card: 226 36% 11%;
+    --card-foreground: 220 30% 94%;
+    --muted: 226 30% 16%;
+    --muted-foreground: 220 16% 68%;
+    --primary: 220 40% 92%;
+    --primary-foreground: 226 55% 12%;
+    /* บนพื้นมืดน้ำเงินแบรนด์เข้มเกินจะอ่านไม่ออก จึงยกความสว่างขึ้นแล้วใช้ตัวหนังสือสีเข้มแทน */
+    --accent: 222 84% 66%;
+    --accent-foreground: 226 60% 9%;
+    --brand: 222 84% 66%;
+    --ok: 148 48% 48%;
+    --warn: 32 88% 56%;
+    --bad: 358 76% 62%;
+    --steel: 212 30% 62%;
+    --border: 226 24% 22%;
+    --ring: 222 84% 66%;
+    --shadow: 226 70% 2%;
+    --grid: 226 30% 16%;
+  }
+
+  * { @apply border-border; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv05' 1;
+    overscroll-behavior-y: none;
+  }
+  /* พื้นหลัง: กริดกระดาษเขียนแบบโทนน้ำเงิน */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: linear-gradient(hsl(var(--grid)/0.55) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid)/0.55) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(120% 80% at 50% 0%, #000 0%, transparent 78%);
+    opacity: 0.5;
+  }
+  ::selection { background: hsl(var(--accent)/0.22); }
+  input, textarea, select, button { font: inherit; }
+}
+
+@layer components {
+  /* แถบสีแบรนด์ — ไล่จากกรมท่าไปน้ำเงิน TENNECO ใช้เป็นขอบบนของการ์ด/หัวจอ */
+  .brand-stripe {
+    background-image: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--brand)) 55%, hsl(var(--brand) / 0.55) 100%);
+  }
+  /* โลโก้ TENNECO เป็นสีน้ำเงินบนพื้นใส — บนพื้นมืดเปลี่ยนเป็นสีขาวให้อ่านออก */
+  .brand-logo {
+    @apply block h-auto select-none;
+  }
+  .dark .brand-logo {
+    filter: brightness(0) invert(1);
+  }
+  .panel {
+    @apply relative rounded-lg border bg-card shadow-panel;
+  }
+  .label-micro {
+    @apply font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground;
+  }
+  .num {
+    @apply font-mono tabular-nums tracking-tight;
+  }
+  .press {
+    @apply transition-[transform,box-shadow,background-color,border-color] duration-150 active:scale-[.985];
+  }
+  .focusable {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  .scroll-x {
+    @apply overflow-x-auto [scrollbar-width:thin];
+    -webkit-overflow-scrolling: touch;
+  }
+  .stagger > * { animation: fade-up 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0.02s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.06s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.1s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.14s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.18s; }
+  .stagger > *:nth-child(6) { animation-delay: 0.22s; }
+  .stagger > *:nth-child(7) { animation-delay: 0.26s; }
+  .stagger > *:nth-child(8) { animation-delay: 0.3s; }
+}
+
+@layer utilities {
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

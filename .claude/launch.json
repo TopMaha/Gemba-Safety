@@ -1,0 +1,58 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gemba-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "gemba-dev-local",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_API_URL= && npm run dev -- --port 8090 --strictPort"
+      ],
+      "port": 8090
+    },
+    {
+      "name": "gemba-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "gemba-preview-ghpages",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "preview",
+        "--",
+        "--base=/Gemba-Safety/",
+        "--port",
+        "8081"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "gemba-worker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--port",
+        "8787",
+        "--cwd",
+        "worker"
+      ],
+      "port": 8787
+    }
+  ]
+}

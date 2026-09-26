@@ -1,0 +1,87 @@
+# Deploy หน้าเว็บขึ้น GitHub Pages
+# GitHub Pages เสิร์ฟไฟล์ดิบจาก repo ไม่ได้ build ให้ จึงต้อง build ที่นี่แล้วส่ง dist/ ไปเสิร์ฟ
+#
+# ต้องไปเปิดสวิตช์ใน repo ก่อนครั้งเดียว:
+#   Settings -> Pages -> Build and deployment -> Source = "GitHub Actions"
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # กดรันเองได้จากแท็บ Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# ถ้า push รัวกัน ให้ตัวใหม่ทำงานแทน แต่ไม่ยกเลิกตัวที่กำลัง deploy ค้างอยู่
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: ติดตั้ง dependency
+        run: npm ci
+
+      - name: ตรวจชนิดข้อมูล
+        run: npm run lint
+
+      # ถ้าไม่มี secret แล้วปล่อยให้ build ผ่าน จะได้แอปที่ดูเหมือนใช้งานได้ปกติ
+      # แต่จริง ๆ ไม่ต่อฐานข้อมูลเลย (ใช้ข้อมูลตั้งต้นในเครื่องแทน) ซึ่งจับได้ยาก
+      # เพราะหน้าจอขึ้นครบทุกอย่าง จึงให้ล้มตั้งแต่ตรงนี้พร้อมบอกวิธีแก้
+      - name: ตรวจว่ามี secret ครบก่อน build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_AUTH_TOKEN: ${{ secrets.VITE_AUTH_TOKEN }}
+        run: |
+          missing=""
+          if [ -z "$VITE_API_URL" ]; then missing="$missing VITE_API_URL"; fi
+          if [ -z "$VITE_AUTH_TOKEN" ]; then missing="$missing VITE_AUTH_TOKEN"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::ยังไม่ได้ตั้ง secret:$missing"
+            echo "ตั้งที่ Settings -> Secrets and variables -> Actions ของ repo นี้"
+            echo "ค่าต้องตรงกับ .env.local ที่ใช้ deploy ขึ้น Cloudflare Pages"
+            exit 1
+          fi
+
+      # ⚠️ VITE_* ถูกฝังลงไฟล์ JS ตอน build ผู้ใช้ที่เปิดหน้าเว็บจึงอ่านโทเคนได้
+      #    เป็นข้อจำกัดเดิมของการยืนยันตัวตนแบบเบาที่โปรเจกต์นี้เลือกใช้
+      #    ตัวโทเคนนี้เปิดได้แค่การอ่านข้อมูลกับงานประจำวัน ไม่ได้เปิดสิทธิ์ผู้ดูแล
+      #    เพราะงานแอดมินต้องมี X-Admin-Token จากตาราง admin_sessions อีกชั้น
+      - name: Build (base = /Gemba-Safety/ เพราะ Pages เสิร์ฟใต้ subpath ของชื่อ repo)
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_AUTH_TOKEN: ${{ secrets.VITE_AUTH_TOKEN }}
+        run: npm run build:ghpages
+
+      # GitHub Pages ไม่มีไฟล์ _redirects แบบ Cloudflare
+      # ท่ามาตรฐานของ SPA คือ copy index.html เป็น 404.html
+      # เมื่อเปิด deep link เช่น /Gemba-Safety/coaching/mgr_01 Pages จะเสิร์ฟ 404.html
+      # ซึ่งก็คือแอปทั้งตัว แล้ว React Router จะจัดการเส้นทางต่อเอง
+      - name: สร้าง 404.html สำหรับ client-side routing
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
