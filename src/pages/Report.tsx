@@ -14,7 +14,7 @@ import { formatDate, startOfMonth, todayISO } from '@/lib/time';
 export default function Report() {
   const { t, lang } = useI18n();
   const { admin } = useSession();
-  const { managers, activeManagers, plans, records, themes, pathOf } = useCoreData();
+  const { managers, walkers, plans, records, themes, pathOf } = useCoreData();
   const { data: changes = [] } = useChangeHistory();
   const today = todayISO();
   const [from, setFrom] = useState(startOfMonth(today));
@@ -43,8 +43,8 @@ export default function Report() {
   }, [managers, scopedPlans, scopedRecords]);
 
   const byTheme = useMemo(
-    () => themeCompletion(themes.filter((x) => x.is_active).map((x) => x.id), records, activeManagers, from, to),
-    [themes, records, activeManagers, from, to],
+    () => themeCompletion(themes.filter((x) => x.is_active).map((x) => x.id), records, walkers, from, to),
+    [themes, records, walkers, from, to],
   );
 
   const exportWalks = () => {
@@ -176,7 +176,7 @@ export default function Report() {
       </Card>
 
       <Card className="mb-4">
-        <CardHeader title={t('report.byTheme')} hint={`Plan = ${activeManagers.length} ${t('common.people')}`} />
+        <CardHeader title={t('report.byTheme')} hint={`Plan = ${walkers.length} ${t('common.people')}`} />
         <CardBody className="space-y-3">
           {byTheme.map((row) => (
             <div key={row.theme_id}>

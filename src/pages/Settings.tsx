@@ -77,8 +77,8 @@ function UsersTab() {
   const [editing, setEditing] = useState<Manager | null>(null);
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
-  // ทะเบียนมีเกือบสี่ร้อยคนแต่เปิดสิทธิ์ไว้ไม่ถึงหนึ่งในหก
-  // ถ้าไม่มีตัวกรองนี้ ผู้ดูแลจะหา "ใครเข้าได้บ้าง" ไม่เจอในกองรายชื่อ
+  // ทะเบียนมีเกือบสี่ร้อยคนแต่ผู้เดินตรวจมีไม่กี่คน (Super Admin เลือกเองรายคน)
+  // ถ้าไม่มีตัวกรองนี้ ผู้ดูแลจะหา "ใครต้องเดินบ้าง" ไม่เจอในกองรายชื่อ
   const [access, setAccess] = useState<'all' | 'yes' | 'no'>('all');
 
   const rows = managers.filter((m) => {
@@ -141,7 +141,7 @@ function UsersTab() {
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[14px] font-medium">{managerLabel(m, lang)}</span>
                     {!m.is_active ? <Badge tone="bad">{t('common.inactive')}</Badge> : null}
-                    {m.is_active && !m.can_login ? <Badge>{t('admin.noLoginBadge')}</Badge> : null}
+                    {m.is_active && m.can_login ? <Badge tone="accent">{t('admin.walkerBadge')}</Badge> : null}
                   </div>
                   <div className="num text-[11px] text-muted-foreground">
                     {m.manager_code} · {m.department}

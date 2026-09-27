@@ -450,15 +450,16 @@ const ADMINS: [code: string, name: string][] = [
 export const managerId = (code: string) => 'mgr_' + code.replace(/[^A-Za-z0-9]/g, '_');
 
 /**
- * ตำแหน่งที่เปิดสิทธิ์เข้าใช้แอปไว้ตั้งแต่ต้น = ระดับหัวหน้าขึ้นไป (63 คน)
+ * ผู้เดินตรวจตั้งต้น (can_login) — เหลือแค่ Super Admin คนเดียว
  *
- * รหัสเข้าระบบคือรหัสพนักงานซึ่งเดาได้ไม่ยาก ถ้าเปิดให้ทั้ง 393 คน
- * ใครก็ล็อกอินแทนกันได้ทั้งโรงงาน จึงเปิดเฉพาะคนที่ต้องเดิน Gemba จริง
- * คนที่เหลือยังอยู่ในทะเบียนเพื่อเลือกเป็นผู้ร่วมเดิน และผู้ดูแลระบบเปิดเพิ่มรายคนได้
+ * รายชื่อผู้เดินยังไม่ได้กำหนด Super Admin จะเลือกเองรายคนในหน้าตั้งค่า → ผู้ใช้งาน
+ * คนที่ถูกเลือกจะล็อกอินได้ และถูกนับเป็นเป้าในแดชบอร์ด/ผลงานรายผู้นำ
+ * คนที่เหลือยังอยู่ในทะเบียนเพื่อเลือกเป็นผู้ร่วมเดินได้
  *
- * ค่าชุดนี้ต้องตรงกับ worker/migrate-access.sql และ worker/seed.sql
+ * รหัสเข้าระบบคือรหัสพนักงานซึ่งเดาได้ไม่ยาก จึงไม่เปิดให้ใครโดยอัตโนมัติ
+ * ค่าชุดนี้ต้องตรงกับ worker/migrate-walkers-reset.sql และ worker/seed.sql
  */
-const LOGIN_POSITIONS = ['ผู้จัดการ', 'ผู้ดูแลแผนก', 'หัวหน้าทีม', 'ผู้ดูแลระบบ', 'เจ้าหน้าที่ความปลอดภัย'];
+const INITIAL_WALKERS = ['T-815'];
 
 export function buildManagers(createdAt: string): Manager[] {
   return PEOPLE.map(([code, name, dept, position, active]) => ({
@@ -470,7 +471,7 @@ export function buildManagers(createdAt: string): Manager[] {
     avatar_url: null,
     is_active: active === 1,
     dashboard_enabled: true,
-    can_login: active === 1 && LOGIN_POSITIONS.includes(position),
+    can_login: active === 1 && INITIAL_WALKERS.includes(code),
     created_at: createdAt,
   }));
 }

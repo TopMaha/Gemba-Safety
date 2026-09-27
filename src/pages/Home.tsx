@@ -109,7 +109,6 @@ export default function Home() {
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
-              placeholder={t('auth.codePlaceholder')}
               onChange={(e) => (setCode(e.target.value), setError(null))}
               className="num h-14 text-center text-2xl font-semibold uppercase tracking-[0.18em]"
             />

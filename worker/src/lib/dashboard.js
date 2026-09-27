@@ -6,7 +6,7 @@
  * สูตรตรงกับ src/lib/calc.ts ของ frontend
  *   Adherence %  = แผนที่เดินแล้ว ÷ แผนที่ถึงกำหนดแล้ว × 100
  *                  (ไม่นับแผนที่ยกเลิก และไม่นับแผนที่ยังไม่ถึงกำหนด)
- *   Completion % = คนที่เดินหัวข้อนั้น (ไม่ซ้ำ) ÷ พนักงาน Active ทั้งหมด × 100
+ *   Completion % = คนที่เดินหัวข้อนั้น (ไม่ซ้ำ) ÷ ผู้เดินตรวจ (is_active + can_login) × 100
  *   ทุกเปอร์เซ็นต์ปัดลง (floor) ตามสเปก — 17/30 = 56%
  */
 
@@ -32,7 +32,8 @@ export async function buildSummary(db, from, to) {
       .bind(from, to, asOf)
       .first(),
 
-    db.prepare(`SELECT COUNT(*) AS n FROM managers WHERE is_active = 1`).first(),
+    // ผู้เดินตรวจ = คนที่ Super Admin เปิดสิทธิ์ไว้ ตรงกับ walkers ใน src/hooks/useData.ts
+    db.prepare(`SELECT COUNT(*) AS n FROM managers WHERE is_active = 1 AND can_login = 1`).first(),
 
     db
       .prepare(

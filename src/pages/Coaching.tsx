@@ -14,14 +14,14 @@ const RANGES = [7, 30, 90] as const;
 
 export default function Coaching() {
   const { t, lang } = useI18n();
-  const { activeManagers, plans, records, isLoading } = useCoreData();
+  const { walkers, plans, records, isLoading } = useCoreData();
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
 
   const today = todayISO();
   const from = addDays(today, -days + 1);
   const rows = useMemo(
-    () => rankManagers(activeManagers, plans, records, from, today),
-    [activeManagers, plans, records, from, today],
+    () => rankManagers(walkers, plans, records, from, today),
+    [walkers, plans, records, from, today],
   );
 
   return (

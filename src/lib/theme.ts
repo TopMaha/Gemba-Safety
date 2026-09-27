@@ -7,21 +7,25 @@
 
 export type Mode = 'light' | 'dark';
 
-const MODE_KEY = 'gemba.mode';
-/** คีย์ของตัวเลือกสีเน้นรุ่นเก่า (amber/steel/lime) — ล้างทิ้งเมื่อเปิดแอป */
-const LEGACY_ACCENT_KEY = 'gemba.accent';
+const MODE_KEY = 'gemba.mode.v2';
+/**
+ * คีย์รุ่นเก่า — ล้างทิ้งเมื่อเปิดแอป
+ *   gemba.accent  ตัวเลือกสีเน้นรุ่นเก่า (amber/steel/lime)
+ *   gemba.mode    รุ่นเดิมบันทึกโหมดตามธีมของเครื่องตั้งแต่เปิดครั้งแรก (มือถือที่ตั้งมืดไว้จึงค้างโหมดมืด)
+ *                 เปลี่ยนคีย์เพื่อให้ทุกเครื่องกลับมาเริ่มที่โหมดสว่างครั้งเดียว
+ */
+const LEGACY_KEYS = ['gemba.accent', 'gemba.mode'];
 
+/** เริ่มต้นเป็นโหมดสว่าง (ตอนเช้า) เสมอ ไม่ตามธีมของเครื่อง — มืดเฉพาะเมื่อผู้ใช้กดเปลี่ยนเอง */
 export function getMode(): Mode {
-  const v = localStorage.getItem(MODE_KEY);
-  if (v === 'dark' || v === 'light') return v;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return localStorage.getItem(MODE_KEY) === 'dark' ? 'dark' : 'light';
 }
 
 export function applyTheme(mode: Mode = getMode()) {
   const root = document.documentElement;
   root.classList.remove('theme-steel', 'theme-lime');
   root.classList.toggle('dark', mode === 'dark');
-  localStorage.removeItem(LEGACY_ACCENT_KEY);
+  LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
   localStorage.setItem(MODE_KEY, mode);
 }
 

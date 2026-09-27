@@ -41,11 +41,13 @@ export function useCoreData() {
     (areaId: string) => fullPathOf(areas.data ?? [], areaId, lang),
     [areas.data, lang],
   );
-  const activeManagers = useMemo(() => (managers.data ?? []).filter((m) => m.is_active), [managers.data]);
+  // ผู้เดินตรวจ = คนที่ Super Admin เปิดสิทธิ์ไว้ (can_login) เท่านั้น ไม่ใช่พนักงานทั้งโรงงาน
+  // เป้า "Plan = N คน" ในแดชบอร์ดและอันดับผลงานนับจากกลุ่มนี้
+  const walkers = useMemo(() => (managers.data ?? []).filter((m) => m.is_active && m.can_login), [managers.data]);
 
   return {
     managers: managers.data ?? [],
-    activeManagers,
+    walkers,
     areas: areas.data ?? [],
     themes: themes.data ?? [],
     plans: plans.data ?? [],

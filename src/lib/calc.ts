@@ -38,7 +38,7 @@ export function adherence(
   };
 }
 
-/** ── Completion รายหัวข้อ: นับ "คน" ไม่ซ้ำ เทียบกับพนักงาน Active ทั้งหมด */
+/** ── Completion รายหัวข้อ: นับ "คน" ไม่ซ้ำ เทียบกับผู้เดินตรวจที่ Super Admin กำหนด (is_active + can_login) */
 export interface ThemeCompletionRow {
   theme_id: string;
   plan: number;

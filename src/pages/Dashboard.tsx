@@ -33,7 +33,7 @@ type Scope = 'week' | 'month';
 export default function Dashboard() {
   const { t, lang } = useI18n();
   const { session, admin } = useSession();
-  const { activeManagers, areas, managers, plans, records, themes, isLoading } = useCoreData();
+  const { walkers, areas, managers, plans, records, themes, isLoading } = useCoreData();
   const { data: allFindings } = useFindings();
 
   const [scope, setScope] = useState<Scope>('week');
@@ -91,13 +91,13 @@ export default function Dashboard() {
     [plans, from, to, session],
   );
   const teamAdherence = useMemo(() => adherence(plans, from, to), [plans, from, to]);
-  const ranks = useMemo(() => rankManagers(activeManagers, plans, records, from, to), [activeManagers, plans, records, from, to]);
+  const ranks = useMemo(() => rankManagers(walkers, plans, records, from, to), [walkers, plans, records, from, to]);
   const myRank = ranks.find((r) => r.manager.id === session?.manager_id);
   const teamWalks = records.filter((r) => r.actual_date >= from && r.actual_date <= to);
 
   const completionRows = useMemo(
-    () => themeCompletion(chosenThemes, records, activeManagers, themeRange.from, themeRange.to),
-    [chosenThemes, records, activeManagers, themeRange],
+    () => themeCompletion(chosenThemes, records, walkers, themeRange.from, themeRange.to),
+    [chosenThemes, records, walkers, themeRange],
   );
   const overall = overallCompletion(completionRows);
 
@@ -467,7 +467,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader
                 title={t('dash.themeSummary')}
-                hint={`${t('dash.scope')}: ${themeRange.label} · Plan = ${activeManagers.length} ${t('common.people')}`}
+                hint={`${t('dash.scope')}: ${themeRange.label} · Plan = ${walkers.length} ${t('common.people')}`}
               />
               <CardBody className="space-y-3">
                 {completionRows.map((row) => {
@@ -509,7 +509,7 @@ export default function Dashboard() {
             {missingRow.missingManagerIds.length ? (
               <ul className="space-y-1.5">
                 {missingRow.missingManagerIds.map((id) => {
-                  const m = activeManagers.find((x) => x.id === id);
+                  const m = walkers.find((x) => x.id === id);
                   return (
                     <li key={id} className="flex items-center gap-2.5 rounded-md border px-3 py-2">
                       <Avatar name={managerLabel(m, lang)} src={m?.avatar_url} seed={id} size={30} />
