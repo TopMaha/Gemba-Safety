@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { STORAGE_PREFIX } from '@/lib/storageKeys';
 
 /**
  * กันจอขาว — ถ้ามีข้อผิดพลาดตอน render ให้แสดงข้อความและปุ่มแก้ไข
@@ -18,15 +19,16 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   /**
    * ทางออกสุดท้ายเมื่อหน้าจอเปิดไม่ขึ้น — ล้างสำเนาในเครื่องแล้วเริ่มใหม่
    *
-   * กวาดทุกคีย์ที่ขึ้นต้นด้วย gemba. แทนการไล่ลบทีละชื่อ เพราะเวอร์ชันของสำเนา
+   * กวาดทุกคีย์ที่ขึ้นต้นด้วย safety. แทนการไล่ลบทีละชื่อ เพราะเวอร์ชันของสำเนา
    * ในเครื่องเปลี่ยนได้เรื่อย ๆ (v1 → v2 → v3) ถ้าไล่ลบทีละชื่อแล้วลืมแก้ตาม
    * ปุ่มนี้จะไม่ล้างอะไรเลย แล้วผู้ใช้จะค้างอยู่กับหน้าจอที่พังตลอดไป
    *
+   * ห้ามกวาด gemba.* — เป็นข้อมูลและร่างของ Gemba Walk ที่อยู่ origin เดียวกัน (ดู storageKeys.ts)
    * ข้อมูลบนเซิร์ฟเวอร์ไม่ได้หายไปด้วย รอบซิงก์ถัดไปดึงกลับมาครบ
    */
   reset = () => {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('gemba.')) localStorage.removeItem(key);
+      if (key.startsWith(STORAGE_PREFIX)) localStorage.removeItem(key);
     }
     location.reload();
   };

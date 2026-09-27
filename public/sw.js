@@ -10,7 +10,9 @@
  * จะได้ข้อมูลเก่าค้างโดยที่แอปไม่รู้ตัว ซึ่งอันตรายกว่าการไม่มีข้อมูล
  */
 
-const VERSION = 'safety-v4';
+// ขึ้นเลขเมื่อไฟล์ใน PRECACHE เปลี่ยน — แคชเก่าของแอปนี้ถูกล้างตอน activate
+const CACHE_PREFIX = 'safety-';
+const VERSION = `${CACHE_PREFIX}v5`;
 const SHELL = `${VERSION}-shell`;
 
 // ไฟล์ขั้นต่ำที่ต้องมีเพื่อให้แอปเปิดขึ้นมาได้
@@ -32,7 +34,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))))
+      // ล้างเฉพาะแคชของแอปนี้ — บน github.io ทุกแอปของบัญชีใช้ origin เดียวกัน (แคชร่วมกัน)
+      // เดิมล้างทุกอันที่ไม่ใช่ของเรา จึงไปลบแคชออฟไลน์ของ Gemba Walk และ QC Audit ทิ้งด้วย
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k.startsWith(CACHE_PREFIX) && !k.startsWith(VERSION)).map((k) => caches.delete(k)),
+        ),
+      )
       .then(() => self.clients.claim()),
   );
 });

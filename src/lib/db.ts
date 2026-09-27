@@ -1,4 +1,5 @@
 import { buildSeedDb } from './seed';
+import { STORAGE_KEYS } from './storageKeys';
 import type { Db } from './types';
 
 /**
@@ -15,20 +16,19 @@ import type { Db } from './types';
  *
  * ใช้คีย์คนละตัวกับ gemba.db.* ของแอปเดิมโดยตั้งใจ เครื่องที่เคยเปิดแอปเดิมไว้
  * จะได้เริ่มจากทะเบียนตั้งต้นชุดใหม่ ไม่ใช่สำเนาเก่าที่ไม่มีตารางความปลอดภัย
- * (สำเนาเก่าถูกลบทิ้งใน fresh() เพื่อไม่ให้กินพื้นที่ค้างไว้เปล่า ๆ)
+ *
+ * ⚠️ ห้ามลบ gemba.db.* — เป็นสำเนาข้อมูลของ Gemba Walk ที่ใช้งานอยู่บน origin เดียวกัน
+ *    (topmaha.github.io) เดิมเคยลบทิ้งใน fresh() ทำให้ข้อมูลที่ยังไม่ซิงก์ของ Gemba Walk หาย
  *
  * การเปลี่ยนเลขนี้ทำให้เครื่องที่ยังค้างสำเนาชุดเก่าเริ่มใหม่จากทะเบียนตั้งต้น
  */
-const KEY = 'safety.db.v1';
-const LEGACY_KEYS = ['gemba.db.v1', 'gemba.db.v2', 'gemba.db.v3'];
+const KEY = STORAGE_KEYS.db;
 const LATENCY = 90; // จำลองดีเลย์เครือข่าย เพื่อให้เห็น loading state จริง
 
 let cache: Db | null = null;
 const listeners = new Set<() => void>();
 
 function fresh(): Db {
-  // ทิ้งข้อมูลตัวอย่างชุดเก่าที่ยังค้างอยู่ในเครื่อง ไม่งั้นกินพื้นที่ไปเปล่า ๆ
-  for (const k of LEGACY_KEYS) localStorage.removeItem(k);
   const db = buildSeedDb();
   localStorage.setItem(KEY, JSON.stringify(db));
   return db;

@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { th, type Dict } from './locales/th';
 import { en } from './locales/en';
+import { STORAGE_KEYS } from './storageKeys';
 import type { Lang } from './time';
 import type { Area, WalkTheme } from './types';
 
 const dicts: Record<Lang, Dict> = { th, en };
-const LANG_KEY = 'gemba.lang';
+const LANG_KEY = STORAGE_KEYS.lang;
 
 /** เส้นทางคีย์แปลภาษา เช่น 'plan.title' */
 export type TKey = { [S in keyof Dict]: `${S & string}.${keyof Dict[S] & string}` }[keyof Dict];

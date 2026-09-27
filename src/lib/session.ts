@@ -1,8 +1,12 @@
+import { STORAGE_KEYS } from './storageKeys';
 import type { Manager } from './types';
 
-/** เซสชันผู้ใช้ เก็บใน localStorage — คงอยู่หลังรีเฟรช/เปลี่ยนหน้า */
+/**
+ * เซสชันผู้ใช้ เก็บใน localStorage — คงอยู่หลังรีเฟรช/เปลี่ยนหน้า
+ * ใช้คีย์ของแอปนี้เอง ไม่ใช่ gemba.session ของ Gemba Walk (ดู storageKeys.ts)
+ */
 
-const KEY = 'gemba.session';
+const KEY = STORAGE_KEYS.session;
 
 /**
  * เซสชันผู้ดูแลระบบ
@@ -14,10 +18,7 @@ const KEY = 'gemba.session';
  *    มันมีหน้าที่แค่ตัดสินว่าจะโชว์เมนูผู้ดูแลไหม ด่านจริงอยู่ที่ Worker
  *    ซึ่งตรวจโทเคนกับตาราง admin_sessions ทุกครั้งที่มีการเขียนงานแอดมิน
  */
-const ADMIN_KEY = 'gemba.admin.session';
-
-/** ธงชุดเก่าที่เคยใช้เป็นด่าน — ล้างทิ้งเพื่อไม่ให้เหลือค้างชวนเข้าใจผิด */
-const LEGACY_ADMIN_KEY = 'gemba.admin';
+const ADMIN_KEY = STORAGE_KEYS.adminSession;
 
 export interface Session {
   manager_id: string;
@@ -128,13 +129,11 @@ export function isAdmin(): boolean {
 }
 
 export function startAdminSession(s: AdminSession) {
-  localStorage.removeItem(LEGACY_ADMIN_KEY);
   localStorage.setItem(ADMIN_KEY, JSON.stringify(s));
   emit();
 }
 
 export function endAdminSession() {
-  localStorage.removeItem(LEGACY_ADMIN_KEY);
   localStorage.removeItem(ADMIN_KEY);
   emit();
 }

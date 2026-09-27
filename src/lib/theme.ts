@@ -5,16 +5,15 @@
  * ค่าสีทั้งหมดอยู่ใน src/index.css
  */
 
+import { STORAGE_KEYS } from './storageKeys';
+
 export type Mode = 'light' | 'dark';
 
-const MODE_KEY = 'gemba.mode.v2';
 /**
- * คีย์รุ่นเก่า — ล้างทิ้งเมื่อเปิดแอป
- *   gemba.accent  ตัวเลือกสีเน้นรุ่นเก่า (amber/steel/lime)
- *   gemba.mode    รุ่นเดิมบันทึกโหมดตามธีมของเครื่องตั้งแต่เปิดครั้งแรก (มือถือที่ตั้งมืดไว้จึงค้างโหมดมืด)
- *                 เปลี่ยนคีย์เพื่อให้ทุกเครื่องกลับมาเริ่มที่โหมดสว่างครั้งเดียว
+ * คีย์ของแอปนี้เอง — คีย์รุ่นเก่า gemba.accent / gemba.mode / gemba.mode.v2 เป็นของ Gemba Walk
+ * ที่อยู่ origin เดียวกัน แอปนี้จึงไม่ลบ ปล่อยให้ Gemba Walk จัดการเอง (ดู storageKeys.ts)
  */
-const LEGACY_KEYS = ['gemba.accent', 'gemba.mode'];
+const MODE_KEY = STORAGE_KEYS.mode;
 
 /** เริ่มต้นเป็นโหมดสว่าง (ตอนเช้า) เสมอ ไม่ตามธีมของเครื่อง — มืดเฉพาะเมื่อผู้ใช้กดเปลี่ยนเอง */
 export function getMode(): Mode {
@@ -25,7 +24,6 @@ export function applyTheme(mode: Mode = getMode()) {
   const root = document.documentElement;
   root.classList.remove('theme-steel', 'theme-lime');
   root.classList.toggle('dark', mode === 'dark');
-  LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
   localStorage.setItem(MODE_KEY, mode);
 }
 
