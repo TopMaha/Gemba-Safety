@@ -300,6 +300,7 @@ export async function saveTheme(input: Partial<WalkTheme> & { id?: string }, act
       id: uid('th'),
       theme_name: input.theme_name ?? '',
       theme_name_en: input.theme_name_en,
+      form_style: input.form_style ?? 'yes_no_na',
       is_active: input.is_active ?? true,
     };
     db.walk_themes.push(created);
@@ -311,6 +312,7 @@ export async function saveTheme(input: Partial<WalkTheme> & { id?: string }, act
     id: saved.id,
     theme_name: saved.theme_name,
     theme_name_en: saved.theme_name_en,
+    form_style: saved.form_style ?? 'yes_no_na',
     is_active: saved.is_active,
   });
   return saved;
@@ -424,6 +426,8 @@ export type RecordInput = {
   actual_time: string;
   actual_area_id: string;
   theme_ids: string[];
+  /** ช่อง "กะ:" บนหัวแบบฟอร์ม */
+  shift?: string;
   observation: string;
   has_issue: boolean;
   issue_summary?: string;
@@ -444,6 +448,7 @@ export async function createRecord(input: RecordInput, actor: string): Promise<W
       actual_time: input.actual_time,
       actual_area_id: input.actual_area_id,
       theme_ids: input.theme_ids,
+      shift: input.shift ?? '',
       observation: input.observation,
       has_issue: input.has_issue,
       issue_summary: input.issue_summary ?? '',
@@ -487,6 +492,7 @@ export async function createRecord(input: RecordInput, actor: string): Promise<W
     actual_time: created.actual_time,
     actual_area_id: created.actual_area_id,
     theme_ids: created.theme_ids,
+    shift: created.shift,
     observation: created.observation,
     has_issue: created.has_issue,
     issue_summary: created.issue_summary,
@@ -669,6 +675,7 @@ export async function saveChecklistItem(
       id: uid('ck'),
       theme_id: input.theme_id ?? '',
       item_code: input.item_code ?? '',
+      section: input.section ?? 'technical',
       question: input.question ?? '',
       question_en: input.question_en,
       default_severity: input.default_severity ?? 'medium',
@@ -795,6 +802,8 @@ export type FindingInput = {
   severity: Severity;
   due_date?: ISODate;
   immediate_action?: string;
+  /** คอลัมน์ "การดำเนินการแก้ไข" ในตารางปัญหาที่ตรวจพบ */
+  corrective_action?: string;
   before_photos: string[];
   assigned_manager_id?: string | null;
   assigned_supervisor_id?: string | null;
@@ -819,6 +828,7 @@ export async function createFinding(input: FindingInput, actor: Actor): Promise<
       reported_at: now,
       due_date: input.due_date ?? dueDateFor(input.severity, db.app_settings),
       immediate_action: input.immediate_action ?? '',
+      corrective_action: input.corrective_action ?? '',
       assigned_manager_id: input.assigned_manager_id ?? null,
       assigned_supervisor_id: input.assigned_supervisor_id ?? null,
       assigned_at: assigned ? now : null,
@@ -872,6 +882,7 @@ export async function createFinding(input: FindingInput, actor: Actor): Promise<
     reported_at: created.reported_at,
     due_date: created.due_date,
     immediate_action: created.immediate_action,
+    corrective_action: created.corrective_action,
     before_photos: created.before_photos,
     assigned_manager_id: created.assigned_manager_id,
     assigned_supervisor_id: created.assigned_supervisor_id,

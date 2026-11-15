@@ -65,6 +65,10 @@ cd worker && npx wrangler d1 execute gemba-safety --local --file=./seed-safety.s
 ```
 
 ```bash
+cd worker && npx wrangler d1 execute gemba-safety --local --file=./seed-gemba-topics.sql
+```
+
+```bash
 cd worker && npx wrangler dev --local --port 8787
 ```
 
@@ -119,10 +123,46 @@ cd worker && npx wrangler d1 execute gemba-safety --remote --file=./seed.sql
 cd worker && npx wrangler d1 execute gemba-safety --remote --file=./seed-safety.sql
 ```
 
-ตรวจว่าข้อมูลเข้าครบ — ต้องได้ `393 · 20 · 12 · 48 · 6 · 17`
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --file=./seed-gemba-topics.sql
+```
+
+ตรวจว่าข้อมูลเข้าครบ — ฐานใหม่ต้องได้ `393 · 20 · 13 · 151 · 6 · 17`
+(ฐานที่อัปเกรดจากรุ่นก่อนได้ `25 · 199` เพราะหมวด/ข้อตรวจเดิมถูกปิดไว้ ไม่ได้ลบ — ดู 2.7)
 
 ```bash
 cd worker && npx wrangler d1 execute gemba-safety --remote --command "SELECT (SELECT COUNT(*) FROM managers) mgrs, (SELECT COUNT(*) FROM areas) areas, (SELECT COUNT(*) FROM walk_themes) themes, (SELECT COUNT(*) FROM safety_checklist_items) items, (SELECT COUNT(*) FROM roles) roles, (SELECT COUNT(*) FROM permissions) perms"
+```
+
+### 2.7 อัปเกรดเป็นแบบฟอร์ม GEMBA WALK (ฐานข้อมูลที่ใช้งานอยู่แล้ว) — ⏳ ยังไม่ได้ทำ
+
+ทำตามลำดับนี้เท่านั้น — Worker ตัวใหม่เขียนคอลัมน์ใหม่ ถ้า deploy ก่อนเพิ่มคอลัมน์ การบันทึกการเดินจะล้ม
+และหน้าเว็บตัวใหม่ต้องการหัวข้อ 13 หมวดจากเซิร์ฟเวอร์
+
+1. เพิ่มคอลัมน์ (ครั้งเดียว — รันซ้ำได้ error "duplicate column name" ซึ่งไม่เป็นไร)
+
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --file=./migrate-gemba-forms.sql
+```
+
+2. ใส่หัวข้อ 13 หมวด + ข้อตรวจ 151 ข้อ และปิดหมวดเดิม 12 หมวด (รันซ้ำได้)
+
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --file=./seed-gemba-topics.sql
+```
+
+3. deploy Worker
+
+```bash
+cd worker && npx wrangler deploy
+```
+
+4. push ขึ้น `main` เพื่อให้ GitHub Pages build หน้าเว็บตัวใหม่
+
+ตรวจผล — ต้องได้หมวดที่เปิดใช้ 13 และข้อตรวจที่เปิดใช้ 151
+
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --command "SELECT (SELECT COUNT(*) FROM walk_themes WHERE is_active = 1) themes, (SELECT COUNT(*) FROM safety_checklist_items WHERE is_active = 1) items"
 ```
 
 ### 2.4 สร้างที่เก็บรูป R2 — ✅ ทำให้แล้ว (`gemba-safety-photos`)

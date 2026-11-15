@@ -21,6 +21,8 @@ import { entryStmt, diffStmts } from './audit.js';
 const OPEN_STATUSES = ['open', 'assigned', 'in_progress', 'fixed'];
 
 const SEVERITIES = ['low', 'medium', 'high', 'critical'];
+/** ตารางในแบบฟอร์ม GEMBA WALK: คำถามทางเทคนิค · คำถามความผูกพันของพนักงาน */
+const SECTIONS = ['technical', 'engagement'];
 const STATUSES = ['open', 'assigned', 'in_progress', 'fixed', 'closed', 'cancelled'];
 
 /** วันครบกำหนดตั้งต้นตามระดับความรุนแรง — ยิ่งรุนแรงยิ่งต้องแก้เร็ว */
@@ -264,6 +266,7 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
       id: clientId(b, 'ck'),
       theme_id: str(b, 'theme_id', { max: 60 }),
       item_code: str(b, 'item_code', { required: false, max: 30 }),
+      section: oneOf(b, 'section', SECTIONS, { required: false, fallback: 'technical' }),
       question: str(b, 'question', { max: 500 }),
       question_en: str(b, 'question_en', { required: false, max: 500 }),
       default_severity: oneOf(b, 'default_severity', SEVERITIES, { required: false, fallback: 'medium' }),
@@ -274,11 +277,11 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
     try {
       await c.env.DB.prepare(
         `INSERT INTO safety_checklist_items
-           (id, theme_id, item_code, question, question_en, default_severity, sort_order, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, theme_id, item_code, section, question, question_en, default_severity, sort_order, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
-          row.id, row.theme_id, row.item_code, row.question, row.question_en,
+          row.id, row.theme_id, row.item_code, row.section, row.question, row.question_en,
           row.default_severity, row.sort_order, row.is_active,
         )
         .run();
@@ -297,6 +300,7 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
     const next = {
       theme_id: 'theme_id' in b ? str(b, 'theme_id', { max: 60 }) : before.theme_id,
       item_code: 'item_code' in b ? str(b, 'item_code', { required: false, max: 30 }) : before.item_code,
+      section: 'section' in b ? oneOf(b, 'section', SECTIONS) : (before.section ?? 'technical'),
       question: 'question' in b ? str(b, 'question', { max: 500 }) : before.question,
       question_en: 'question_en' in b ? str(b, 'question_en', { required: false, max: 500 }) : before.question_en,
       default_severity:
@@ -312,12 +316,12 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
       db
         .prepare(
           `UPDATE safety_checklist_items
-              SET theme_id = ?, item_code = ?, question = ?, question_en = ?,
+              SET theme_id = ?, item_code = ?, section = ?, question = ?, question_en = ?,
                   default_severity = ?, sort_order = ?, is_active = ?
             WHERE id = ?`,
         )
         .bind(
-          next.theme_id, next.item_code, next.question, next.question_en,
+          next.theme_id, next.item_code, next.section, next.question, next.question_en,
           next.default_severity, next.sort_order, next.is_active, id,
         ),
       ...diffStmts(db, {
@@ -452,6 +456,7 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
         isoDate(b, 'due_date', { required: false }) ??
         addDays(reportedAt.slice(0, 10), settings[DUE_COLUMN[severity]]),
       immediate_action: str(b, 'immediate_action', { required: false, max: 2000 }),
+      corrective_action: str(b, 'corrective_action', { required: false, max: 2000 }),
       assigned_manager_id: str(b, 'assigned_manager_id', { required: false, max: 60 }) || null,
       assigned_supervisor_id: str(b, 'assigned_supervisor_id', { required: false, max: 60 }) || null,
     };
@@ -467,14 +472,14 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
           `INSERT INTO safety_findings
              (id, finding_no, record_id, area_id, theme_id, checklist_item_id,
               title, description, severity, status, reported_by, reported_at, due_date,
-              immediate_action, assigned_manager_id, assigned_supervisor_id, assigned_at, assigned_by,
+              immediate_action, corrective_action, assigned_manager_id, assigned_supervisor_id, assigned_at, assigned_by,
               created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           row.id, row.finding_no, row.record_id, row.area_id, row.theme_id, row.checklist_item_id,
           row.title, row.description, row.severity, status, row.reported_by, row.reported_at, row.due_date,
-          row.immediate_action, row.assigned_manager_id, row.assigned_supervisor_id,
+          row.immediate_action, row.corrective_action, row.assigned_manager_id, row.assigned_supervisor_id,
           assigned ? now : null, assigned ? actor.name : '', now, now,
         ),
       ...photoStmts(db, row.id, 'before', photos, actor.name),
@@ -532,6 +537,10 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
       due_date: 'due_date' in b ? isoDate(b, 'due_date') : before.due_date,
       immediate_action:
         'immediate_action' in b ? str(b, 'immediate_action', { required: false, max: 2000 }) : before.immediate_action,
+      corrective_action:
+        'corrective_action' in b
+          ? str(b, 'corrective_action', { required: false, max: 2000 })
+          : (before.corrective_action ?? ''),
     };
 
     const stmts = [
@@ -539,12 +548,12 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
         .prepare(
           `UPDATE safety_findings
               SET area_id = ?, theme_id = ?, title = ?, description = ?, severity = ?,
-                  due_date = ?, immediate_action = ?, updated_at = ?
+                  due_date = ?, immediate_action = ?, corrective_action = ?, updated_at = ?
             WHERE id = ?`,
         )
         .bind(
           next.area_id, next.theme_id, next.title, next.description, next.severity,
-          next.due_date, next.immediate_action, nowStamp(), id,
+          next.due_date, next.immediate_action, next.corrective_action, nowStamp(), id,
         ),
       ...diffStmts(db, { table: 'safety_findings', recordId: id, before, after: next, actor: actor.name }),
     ];
@@ -932,7 +941,7 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
 
     const { results } = await c.env.DB.prepare(
       `SELECT f.finding_no, f.reported_at, f.due_date, f.status, f.severity,
-              a.area_name, t.theme_name, f.title, f.description, f.immediate_action,
+              a.area_name, t.theme_name, f.title, f.description, f.immediate_action, f.corrective_action,
               rep.full_name  AS reporter,
               mgr.full_name  AS manager,
               sup.full_name  AS supervisor,
@@ -953,8 +962,8 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
       .all();
 
     const header = [
-      'เลขที่ใบแจ้ง', 'วันที่พบ', 'ครบกำหนด', 'สถานะ', 'ความรุนแรง', 'พื้นที่', 'หมวด',
-      'หัวข้อปัญหา', 'รายละเอียด', 'การแก้ไขเบื้องต้น', 'ผู้แจ้ง', 'ผู้จัดการที่รับผิดชอบ',
+      'เลขที่ใบแจ้ง', 'วันที่พบ', 'ครบกำหนด', 'สถานะ', 'ความรุนแรง', 'พื้นที่', 'หัวข้อ',
+      'หัวข้อปัญหา', 'รายละเอียด', 'การแก้ไขเบื้องต้น', 'การดำเนินการแก้ไข', 'ผู้แจ้ง', 'ผู้จัดการที่รับผิดชอบ',
       'หัวหน้างานที่รับผิดชอบ', 'สาเหตุราก', 'การแก้ไข', 'วันที่แก้เสร็จ', 'วันที่ปิดงาน',
       'ผู้ตรวจรับ', 'จำนวนรูปหลังแก้',
     ];
@@ -969,7 +978,7 @@ export function registerSafetyRoutes(app, { actorName, clientId, isDuplicate }) 
       lines.push(
         [
           r.finding_no, r.reported_at, r.due_date, r.status, r.severity, r.area_name, r.theme_name,
-          r.title, r.description, r.immediate_action, r.reporter, r.manager, r.supervisor,
+          r.title, r.description, r.immediate_action, r.corrective_action, r.reporter, r.manager, r.supervisor,
           r.root_cause, r.action_taken, r.fixed_at, r.closed_at, r.verifier, r.after_photos,
         ]
           .map(esc)

@@ -165,6 +165,13 @@ export default function FindingDetail() {
                   <p className="text-[13px]">{finding.immediate_action}</p>
                 </div>
               ) : null}
+              {/* คอลัมน์ "การดำเนินการแก้ไข" จากตารางปัญหาที่ตรวจพบ — สิ่งที่ผู้ตรวจกำหนดให้เจ้าของงานทำ */}
+              {finding.corrective_action ? (
+                <div className="rounded-md border border-accent/35 bg-accent/[0.07] px-3 py-2">
+                  <div className="label-micro mb-1">{t('gemba.correctiveAction')}</div>
+                  <p className="whitespace-pre-wrap text-[13px]">{finding.corrective_action}</p>
+                </div>
+              ) : null}
               {finding.before_photos.length ? (
                 <div>
                   <div className="label-micro mb-1.5">{t('safety.beforePhotos')}</div>

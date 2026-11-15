@@ -31,7 +31,7 @@ import { downloadText } from '@/lib/csv';
 import { areaLabelOf, managerLabel, themeLabel, useI18n } from '@/lib/i18n';
 import { savePhoto } from '@/lib/photos';
 import { endOfWeek, formatRange, startOfWeek, todayISO } from '@/lib/time';
-import type { Area, Manager, WalkTheme, WeeklyFocus } from '@/lib/types';
+import type { Area, FormStyle, Manager, WalkTheme, WeeklyFocus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
@@ -445,7 +445,7 @@ function ThemesTab() {
   const [form, setForm] = useState<Partial<WalkTheme>>({});
 
   useEffect(() => {
-    setForm(editing ?? { theme_name: '', theme_name_en: '', is_active: true });
+    setForm(editing ?? { theme_name: '', theme_name_en: '', form_style: 'yes_no_na', is_active: true });
   }, [editing, open]);
 
   const submit = async () => {
@@ -473,6 +473,7 @@ function ThemesTab() {
               <div key={th.id} className={cn('flex items-center gap-2 rounded-md px-2 py-2 hover:bg-muted', !th.is_active && 'opacity-50')}>
                 <Layers className="h-3.5 w-3.5 shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate text-[13px]">{themeLabel(th, lang)}</span>
+                {th.form_style === 'ok_nok' ? <Badge tone="steel">OK/NOK</Badge> : null}
                 <Switch
                   checked={th.is_active}
                   onCheckedChange={(v) => saveTheme.mutateAsync({ id: th.id, is_active: v })}
@@ -498,11 +499,21 @@ function ThemesTab() {
           }
         >
           <div className="space-y-3.5">
-            <Field label={t('admin.themeName')} required hint="เช่น 3-Safety: รถยก/MHE">
+            <Field label={t('admin.themeName')} required hint="เช่น 14-งานที่ก่อให้เกิดความร้อน">
               <Input value={form.theme_name ?? ''} onChange={(e) => setForm((f) => ({ ...f, theme_name: e.target.value }))} />
             </Field>
             <Field label={`${t('admin.themeName')} (EN)`}>
               <Input value={form.theme_name_en ?? ''} onChange={(e) => setForm((f) => ({ ...f, theme_name_en: e.target.value }))} />
+            </Field>
+            {/* คอลัมน์สถานะของแบบฟอร์ม — แบบ GEMBA WALK ทั่วไป หรือแบบ LPA */}
+            <Field label={t('gemba.formStyle')}>
+              <Select
+                value={form.form_style ?? 'yes_no_na'}
+                onChange={(e) => setForm((f) => ({ ...f, form_style: e.target.value as FormStyle }))}
+              >
+                <option value="yes_no_na">{t('gemba.styleYesNoNa')}</option>
+                <option value="ok_nok">{t('gemba.styleOkNok')}</option>
+              </Select>
             </Field>
             <div className="rounded-md border p-3">
               <SwitchRow

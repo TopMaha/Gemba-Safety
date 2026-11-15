@@ -22,6 +22,8 @@ export const STORAGE_KEYS = {
   adminSession: 'safety.admin.session',
   lang: 'safety.lang',
   mode: 'safety.mode',
+  /** แบบฟอร์มการเดินที่กรอกค้างไว้ — ต่อท้ายด้วย .<planId|new> · ลบทิ้งเมื่อบันทึกสำเร็จ */
+  walkDraft: 'safety.walkDraft',
 } as const;
 
 /** ธงว่าเครื่องนี้ย้ายค่าจากคีย์ที่เคยใช้ร่วมกับ Gemba Walk แล้ว — ย้ายครั้งเดียวต่อเครื่อง */

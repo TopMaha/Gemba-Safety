@@ -30,6 +30,9 @@ import { registerSafetyRoutes } from './lib/safety.js';
 
 const app = new Hono();
 
+/** รูปแบบคอลัมน์สถานะของแบบฟอร์ม — ใช่/ไม่ใช่/ไม่เกี่ยวข้อง หรือ OK/NOK (LPA) */
+const FORM_STYLES = ['yes_no_na', 'ok_nok'];
+
 /**
  * id ที่ client สร้างไว้ก่อน (โหมด offline) — ถ้าส่งมาให้ใช้ค่านั้น
  * เพื่อให้ id ในเครื่องกับบนเซิร์ฟเวอร์ตรงกัน เส้นทางอย่าง /walk/:planId จึงไม่พัง
@@ -442,13 +445,14 @@ app.post('/api/themes', async (c) => {
     id: uid('th'),
     theme_name: str(b, 'theme_name', { max: 200 }),
     theme_name_en: str(b, 'theme_name_en', { required: false, max: 200, fallback: null }),
+    form_style: oneOf(b, 'form_style', FORM_STYLES, { required: false, fallback: 'yes_no_na' }),
     is_active: bool(b, 'is_active', { fallback: true }) ? 1 : 0,
   };
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      `INSERT INTO walk_themes (id, theme_name, theme_name_en, is_active) VALUES (?, ?, ?, ?)`,
-    ).bind(row.id, row.theme_name, row.theme_name_en, row.is_active),
+      `INSERT INTO walk_themes (id, theme_name, theme_name_en, form_style, is_active) VALUES (?, ?, ?, ?, ?)`,
+    ).bind(row.id, row.theme_name, row.theme_name_en, row.form_style, row.is_active),
     entryStmt(c.env.DB, {
       table: 'walk_themes', recordId: row.id, action: 'create', newV: row.theme_name, actor: actorName(c),
     }),
@@ -467,12 +471,13 @@ app.put('/api/themes/:id', async (c) => {
   const next = {
     theme_name: 'theme_name' in b ? str(b, 'theme_name', { max: 200 }) : before.theme_name,
     theme_name_en: 'theme_name_en' in b ? str(b, 'theme_name_en', { required: false, max: 200, fallback: null }) : before.theme_name_en,
+    form_style: 'form_style' in b ? oneOf(b, 'form_style', FORM_STYLES) : (before.form_style ?? 'yes_no_na'),
     is_active: 'is_active' in b ? (bool(b, 'is_active') ? 1 : 0) : before.is_active,
   };
 
   await c.env.DB.batch([
-    c.env.DB.prepare(`UPDATE walk_themes SET theme_name = ?, theme_name_en = ?, is_active = ? WHERE id = ?`)
-      .bind(next.theme_name, next.theme_name_en, next.is_active, id),
+    c.env.DB.prepare(`UPDATE walk_themes SET theme_name = ?, theme_name_en = ?, form_style = ?, is_active = ? WHERE id = ?`)
+      .bind(next.theme_name, next.theme_name_en, next.form_style, next.is_active, id),
     ...diffStmts(c.env.DB, { table: 'walk_themes', recordId: id, before, after: next, actor: actorName(c) }),
   ]);
 
@@ -768,6 +773,7 @@ function readRecordInput(b, base = null) {
     actual_date: pick('actual_date', () => isoDate(b, 'actual_date')),
     actual_time: pick('actual_time', () => hhmm(b, 'actual_time')),
     actual_area_id: pick('actual_area_id', () => str(b, 'actual_area_id', { max: 60 })),
+    shift: pick('shift', () => str(b, 'shift', { required: false, max: 40 })),
     observation: pick('observation', () => str(b, 'observation', { required: false, max: 5000 })),
     has_issue: pick('has_issue', () => bool(b, 'has_issue')),
     issue_summary: pick('issue_summary', () => str(b, 'issue_summary', { required: false, max: 2000 })),
@@ -826,12 +832,12 @@ app.post('/api/records', async (c) => {
   const stmts = [
     c.env.DB.prepare(
       `INSERT INTO gemba_walk_records
-         (id, plan_id, manager_id, actual_date, actual_time, actual_area_id, observation,
+         (id, plan_id, manager_id, actual_date, actual_time, actual_area_id, shift, observation,
           has_issue, issue_summary, ci_required, ci_ticket_no, ci_ticket_link, completed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id, input.plan_id, input.manager_id, input.actual_date, input.actual_time, input.actual_area_id,
-      input.observation, input.has_issue ? 1 : 0, input.issue_summary,
+      input.shift ?? '', input.observation, input.has_issue ? 1 : 0, input.issue_summary,
       input.ci_required ? 1 : 0, input.ci_ticket_no, input.ci_ticket_link, nowStamp(),
     ),
     ...childStmts(c.env.DB, id, input),
@@ -870,11 +876,11 @@ app.put('/api/records/:id', async (c) => {
   const stmts = [
     c.env.DB.prepare(
       `UPDATE gemba_walk_records
-          SET manager_id = ?, actual_date = ?, actual_time = ?, actual_area_id = ?, observation = ?,
+          SET manager_id = ?, actual_date = ?, actual_time = ?, actual_area_id = ?, shift = ?, observation = ?,
               has_issue = ?, issue_summary = ?, ci_required = ?, ci_ticket_no = ?, ci_ticket_link = ?
         WHERE id = ?`,
     ).bind(
-      input.manager_id, input.actual_date, input.actual_time, input.actual_area_id, input.observation,
+      input.manager_id, input.actual_date, input.actual_time, input.actual_area_id, input.shift ?? '', input.observation,
       input.has_issue ? 1 : 0, input.issue_summary,
       input.ci_required ? 1 : 0, input.ci_ticket_no, input.ci_ticket_link, id,
     ),

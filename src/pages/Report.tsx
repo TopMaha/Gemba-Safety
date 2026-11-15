@@ -49,7 +49,7 @@ export default function Report() {
 
   const exportWalks = () => {
     const rows: (string | number)[][] = [
-      ['record_id', 'plan_id', 'manager_code', 'manager_name', 'department', 'actual_date', 'actual_time', 'area_path', 'themes', 'observation', 'has_issue', 'issue_summary', 'photos', 'participants', 'ci_ticket_no', 'ci_ticket_link', 'completed_at'],
+      ['record_id', 'plan_id', 'manager_code', 'manager_name', 'department', 'actual_date', 'actual_time', 'shift', 'area_path', 'themes', 'observation', 'has_issue', 'issue_summary', 'photos', 'participants', 'ci_ticket_no', 'ci_ticket_link', 'completed_at'],
     ];
     scopedRecords.forEach((r) => {
       const m = managers.find((x) => x.id === r.manager_id);
@@ -61,6 +61,7 @@ export default function Report() {
         m?.department ?? '',
         r.actual_date,
         r.actual_time,
+        r.shift ?? '',
         pathOf(r.actual_area_id),
         r.theme_ids.map((id) => themeLabel(themes.find((x) => x.id === id), lang)).join(' | '),
         r.observation,

@@ -1,3 +1,5 @@
+import { ONLINE_MODE } from './config';
+import { GEMBA_TOPICS, LEGACY_THEME_IDS, buildGembaChecklist } from './gembaTopics';
 import { buildSeedDb } from './seed';
 import { STORAGE_KEYS } from './storageKeys';
 import type { Db } from './types';
@@ -63,7 +65,28 @@ function heal(db: Db): Db {
     if (!Array.isArray(db[key])) (db as unknown as Record<string, unknown>)[key] = seed[key];
   }
   db.app_settings = { ...seed.app_settings, ...db.app_settings };
+  adoptGembaTopics(db);
   return db;
+}
+
+/**
+ * สำเนาที่สร้างก่อนเปลี่ยนเป็นแบบฟอร์ม GEMBA WALK ยังมีหมวดเดิม 12 หมวด
+ * ทำแบบเดียวกับ worker/seed-gemba-topics.sql: ปิดของเดิม (ไม่ลบ ประวัติยังอ้างอยู่) แล้วเติม 13 หมวดใหม่
+ * (เฉพาะโหมดในเครื่อง — โหมดออนไลน์ได้หมวดชุดใหม่จากเซิร์ฟเวอร์หลังรัน seed-gemba-topics.sql)
+ */
+function adoptGembaTopics(db: Db) {
+  // โหมดออนไลน์: หมวดและข้อตรวจมาจากเซิร์ฟเวอร์เท่านั้น ห้ามเติมเอง ไม่งั้นการเดินจะอ้างหมวดที่เซิร์ฟเวอร์ยังไม่มี
+  if (ONLINE_MODE) return;
+  if (db.walk_themes.some((t) => t.id === GEMBA_TOPICS[0].id)) return;
+  const legacy = new Set(LEGACY_THEME_IDS);
+  db.walk_themes = [
+    ...GEMBA_TOPICS,
+    ...db.walk_themes.map((t) => (legacy.has(t.id) ? { ...t, is_active: false } : t)),
+  ];
+  db.safety_checklist_items = [
+    ...buildGembaChecklist(),
+    ...db.safety_checklist_items.map((i) => (legacy.has(i.theme_id) ? { ...i, is_active: false } : i)),
+  ];
 }
 
 function persist() {

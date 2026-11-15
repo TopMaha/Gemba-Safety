@@ -11,8 +11,9 @@ import { SeverityBadge } from '@/components/safety/FindingBits';
 import { SeveritySelect } from '@/components/safety/FindingDialogs';
 import { useChecklist, useCoreData, useSaveChecklistItem } from '@/hooks/useData';
 import { themeLabel, useI18n } from '@/lib/i18n';
+import { sectionOf } from '@/lib/gembaForm';
 import { nextSortOrder, suggestItemCode } from '@/lib/safety';
-import type { SafetyChecklistItem, WalkTheme } from '@/lib/types';
+import type { ChecklistSection, SafetyChecklistItem, WalkTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 /**
@@ -188,7 +189,11 @@ function ThemeGroup({
                   <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{item.question_en}</p>
                 ) : null}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <SeverityBadge severity={item.default_severity} />
+                  {sectionOf(item) === 'engagement' ? (
+                    <Badge tone="steel">{t('gemba.sectionEngagement')}</Badge>
+                  ) : (
+                    <SeverityBadge severity={item.default_severity} />
+                  )}
                   {!item.is_active ? <Badge>{t('checklistAdmin.inactive')}</Badge> : null}
                 </div>
               </div>
@@ -221,7 +226,10 @@ function ThemeGroup({
 type Form = Pick<
   SafetyChecklistItem,
   'theme_id' | 'item_code' | 'question' | 'question_en' | 'default_severity' | 'sort_order' | 'is_active'
->;
+> & { section: ChecklistSection };
+
+/** รหัสข้อ/ลำดับถัดไปคิดแยกตามตาราง — คำถามความผูกพัน (XXX-E1…) ไม่ไปต่อเลขของคำถามทางเทคนิค */
+const ofSection = (items: SafetyChecklistItem[], section: ChecklistSection) => items.filter((i) => sectionOf(i) === section);
 
 function ChecklistItemDialog({
   open,
@@ -259,6 +267,7 @@ function ChecklistItemDialog({
             default_severity: item.default_severity,
             sort_order: item.sort_order,
             is_active: item.is_active,
+            section: sectionOf(item),
           }
         : blankForm(items, themeId),
     );
@@ -273,9 +282,26 @@ function ChecklistItemDialog({
     setForm((f) => ({
       ...f,
       theme_id: id,
-      ...(item || codeTouched ? {} : { item_code: suggestItemCode(items, id), sort_order: nextSortOrder(items, id) }),
+      ...(item || codeTouched
+        ? {}
+        : {
+            item_code: suggestItemCode(ofSection(items, f.section), id),
+            sort_order: nextSortOrder(ofSection(items, f.section), id),
+          }),
     }));
   };
+
+  const pickSection = (section: ChecklistSection) =>
+    setForm((f) => ({
+      ...f,
+      section,
+      ...(item || codeTouched || !f.theme_id
+        ? {}
+        : {
+            item_code: suggestItemCode(ofSection(items, section), f.theme_id),
+            sort_order: nextSortOrder(ofSection(items, section), f.theme_id),
+          }),
+    }));
 
   // หมวดที่ปิดไปแล้วไม่ให้เลือกใหม่ ยกเว้นหมวดเดิมของข้อที่กำลังแก้
   const themeOptions = themes.filter((th) => th.is_active || th.id === form.theme_id);
@@ -328,6 +354,29 @@ function ChecklistItemDialog({
             </Select>
           </Field>
 
+          <div>
+            <span className="mb-1.5 block text-[13px] font-medium">{t('gemba.section')}</span>
+            <div role="radiogroup" aria-label={t('gemba.section')} className="grid grid-cols-2 gap-1.5">
+              {(['technical', 'engagement'] as ChecklistSection[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.section === s}
+                  onClick={() => pickSection(s)}
+                  className={cn(
+                    'press focusable min-h-[44px] rounded-md border px-2 py-2 text-[12px] font-medium',
+                    form.section === s
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'bg-card text-muted-foreground hover:border-foreground/25',
+                  )}
+                >
+                  {t(s === 'technical' ? 'gemba.sectionTechnical' : 'gemba.sectionEngagement')}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Field label={t('checklistAdmin.question')} required error={errors.question}>
             <Textarea
               ref={questionRef}
@@ -376,13 +425,16 @@ function ChecklistItemDialog({
             </Field>
           </div>
 
-          <div>
-            <div className="mb-1.5 flex items-baseline gap-1.5">
-              <span className="text-[13px] font-medium">{t('checklistAdmin.defaultSeverity')}</span>
-              <span className="text-[11px] text-muted-foreground">{t('checklistAdmin.defaultSeverityHint')}</span>
+          {/* คำถามความผูกพันพนักงานไม่เปิดใบแจ้ง จึงไม่มีความรุนแรงให้ตั้ง */}
+          {form.section === 'technical' ? (
+            <div>
+              <div className="mb-1.5 flex items-baseline gap-1.5">
+                <span className="text-[13px] font-medium">{t('checklistAdmin.defaultSeverity')}</span>
+                <span className="text-[11px] text-muted-foreground">{t('checklistAdmin.defaultSeverityHint')}</span>
+              </div>
+              <SeveritySelect value={form.default_severity} onChange={(s) => setForm((f) => ({ ...f, default_severity: s }))} />
             </div>
-            <SeveritySelect value={form.default_severity} onChange={(s) => setForm((f) => ({ ...f, default_severity: s }))} />
-          </div>
+          ) : null}
 
           <div className="rounded-md border p-3">
             <SwitchRow
@@ -402,11 +454,12 @@ function blankForm(items: SafetyChecklistItem[], themeId?: string): Form {
   const theme = themeId ?? '';
   return {
     theme_id: theme,
-    item_code: theme ? suggestItemCode(items, theme) : '',
+    item_code: theme ? suggestItemCode(ofSection(items, 'technical'), theme) : '',
     question: '',
     question_en: '',
     default_severity: 'medium',
-    sort_order: theme ? nextSortOrder(items, theme) : 10,
+    sort_order: theme ? nextSortOrder(ofSection(items, 'technical'), theme) : 10,
     is_active: true,
+    section: 'technical',
   };
 }

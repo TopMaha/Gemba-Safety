@@ -85,12 +85,16 @@ CREATE INDEX IF NOT EXISTS idx_areas_parent ON areas (parent_id);
 CREATE INDEX IF NOT EXISTS idx_areas_active ON areas (is_active);
 
 
--- ── หัวข้อการเดิน ────────────────────────────────────────────────────────
--- เป็นแท็กติดบนการเดิน ไม่ใช่ชุดคำถาม (ระบบนี้ไม่มีเช็คลิสต์รายข้อ)
+-- ── หัวข้อการเดิน = แบบฟอร์ม GEMBA WALK หนึ่งชุด ──────────────────────────
+-- หนึ่งหัวข้อ = เอกสาร Excel หนึ่งไฟล์ในโฟลเดอร์ "รายการที่ต้องตรวจสอบ" (ข้อตรวจอยู่ใน safety_checklist_items)
+-- form_style บอกว่าคอลัมน์สถานะใช้คำตอบแบบไหน
+--   yes_no_na  ใช่ / ไม่ใช่ / ไม่เกี่ยวข้อง  (แบบฟอร์ม GEMBA WALK ทั่วไป)
+--   ok_nok     OK / NOK                     (แบบฟอร์ม EHS LPA)
 CREATE TABLE IF NOT EXISTS walk_themes (
   id             TEXT PRIMARY KEY,
   theme_name     TEXT NOT NULL,
   theme_name_en  TEXT,
+  form_style     TEXT NOT NULL DEFAULT 'yes_no_na' CHECK (form_style IN ('yes_no_na', 'ok_nok')),
   is_active      INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 );
 
@@ -142,6 +146,9 @@ CREATE TABLE IF NOT EXISTS gemba_walk_records (
   actual_date     TEXT NOT NULL,
   actual_time     TEXT NOT NULL,
   actual_area_id  TEXT NOT NULL REFERENCES areas (id) ON DELETE RESTRICT,
+  -- กะที่ไปเดิน (ช่อง "กะ:" บนหัวแบบฟอร์ม) — ข้อความอิสระ เช่น A · B · กลางวัน
+  shift           TEXT NOT NULL DEFAULT '',
+  -- ช่อง "บันทึกข้อสังเกตเชิงบวก" ท้ายแบบฟอร์ม
   observation     TEXT NOT NULL DEFAULT '',
   has_issue       INTEGER NOT NULL DEFAULT 0 CHECK (has_issue IN (0, 1)),
   issue_summary   TEXT NOT NULL DEFAULT '',
@@ -342,12 +349,16 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role    ON user_roles (role_id);
 
 -- ── แม่แบบเช็คลิสต์ความปลอดภัย ───────────────────────────────────────────
 --
--- ผูกกับ walk_themes ซึ่งในแอปนี้คือ "หมวดความปลอดภัย" (PPE · การ์ดเครื่องจักร · LOTO …)
--- ผู้เดินเลือกหมวดตอนวางแผน แล้วหน้าบันทึกจะดึงข้อตรวจของหมวดนั้นมาให้ติ๊กทีละข้อ
+-- ผูกกับ walk_themes ซึ่งในแอปนี้คือ "หัวข้อ GEMBA WALK" (สารเคมี · ไฟฟ้า · LOTOTO …)
+-- ผู้เดินเลือกหัวข้อตอนวางแผน แล้วหน้าบันทึกจะแสดงแบบฟอร์มของหัวข้อนั้นเป็นตารางเหมือนในเอกสาร
+--   section = technical   ตาราง "คำถามทางเทคนิค" — ตอบ "ไม่ใช่"/NOK แล้วกลายเป็นใบแจ้งปัญหา
+--   section = engagement  ตาราง "คำถามเพื่อสร้างความผูกพันของพนักงาน" — บันทึกว่าได้ถามแล้วหรือยัง
+--                         (result pass = ถามแล้ว · fail = ยังไม่ได้ถาม — ไม่นับเป็นข้อบกพร่อง)
 CREATE TABLE IF NOT EXISTS safety_checklist_items (
   id                TEXT PRIMARY KEY,
   theme_id          TEXT NOT NULL REFERENCES walk_themes (id) ON DELETE CASCADE,
   item_code         TEXT NOT NULL DEFAULT '',
+  section           TEXT NOT NULL DEFAULT 'technical' CHECK (section IN ('technical', 'engagement')),
   question          TEXT NOT NULL,
   question_en       TEXT,
   -- ระดับความรุนแรงตั้งต้นเมื่อข้อนี้ "ไม่ผ่าน" — ผู้ตรวจปรับได้ตอนเปิดใบแจ้ง
@@ -394,6 +405,9 @@ CREATE TABLE IF NOT EXISTS safety_findings (
   due_date                TEXT NOT NULL,
   -- สิ่งที่ทำทันทีหน้างานเพื่อกันอันตรายเฉพาะหน้า (กั้นพื้นที่ · หยุดเครื่อง)
   immediate_action        TEXT NOT NULL DEFAULT '',
+  -- คอลัมน์ "การดำเนินการแก้ไข" ในตารางปัญหาที่ตรวจพบ — สิ่งที่ผู้ตรวจกำหนดให้เจ้าของงานทำ
+  -- (ต่างจาก action_taken ซึ่งผู้รับผิดชอบกรอกตอนแก้เสร็จ)
+  corrective_action       TEXT NOT NULL DEFAULT '',
 
   assigned_manager_id     TEXT REFERENCES managers (id) ON DELETE RESTRICT,
   assigned_supervisor_id  TEXT REFERENCES managers (id) ON DELETE RESTRICT,

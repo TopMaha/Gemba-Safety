@@ -136,6 +136,8 @@ export function FindingFormDialog({
   const [themeId, setThemeId] = useState<string>('');
   const [dueDate, setDueDate] = useState(todayISO());
   const [immediate, setImmediate] = useState('');
+  /** "การดำเนินการแก้ไข" ที่ผู้แจ้งกำหนดให้เจ้าของงาน */
+  const [corrective, setCorrective] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [managerId, setManagerId] = useState<string | null>(null);
   const [supervisorId, setSupervisorId] = useState<string | null>(null);
@@ -165,6 +167,7 @@ export function FindingFormDialog({
       setThemeId(finding.theme_id ?? '');
       setDueDate(finding.due_date);
       setImmediate(finding.immediate_action);
+      setCorrective(finding.corrective_action ?? '');
       setPhotos(finding.before_photos);
       setManagerId(finding.assigned_manager_id);
       setSupervisorId(finding.assigned_supervisor_id);
@@ -178,6 +181,7 @@ export function FindingFormDialog({
     setThemeId(defaults?.theme_id ?? '');
     setDueDate(dueDateFor(sev, settingsRef.current));
     setImmediate('');
+    setCorrective('');
     setPhotos([]);
     setManagerId(null);
     setSupervisorId(null);
@@ -207,6 +211,7 @@ export function FindingFormDialog({
           theme_id: themeId || null,
           due_date: dueDate,
           immediate_action: immediate.trim(),
+          corrective_action: corrective.trim(),
           before_photos: photos,
         },
       });
@@ -222,6 +227,7 @@ export function FindingFormDialog({
         severity,
         due_date: dueDate,
         immediate_action: immediate.trim(),
+        corrective_action: corrective.trim(),
         before_photos: photos,
         assigned_manager_id: managerId,
         assigned_supervisor_id: supervisorId,
@@ -284,6 +290,15 @@ export function FindingFormDialog({
 
           <Field label={t('safety.immediateAction')} hint={t('common.optional')}>
             <Input value={immediate} onChange={(e) => setImmediate(e.target.value)} placeholder={t('safety.immediatePlaceholder')} />
+          </Field>
+
+          <Field label={t('gemba.correctiveAction')} hint={t('common.optional')}>
+            <Textarea
+              value={corrective}
+              onChange={(e) => setCorrective(e.target.value)}
+              placeholder={t('gemba.correctivePlaceholder')}
+              className="min-h-[72px]"
+            />
           </Field>
 
           <Field label={t('safety.dueDate')} required>

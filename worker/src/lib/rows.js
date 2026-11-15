@@ -55,6 +55,8 @@ export function mapTheme(r) {
     id: r.id,
     theme_name: r.theme_name,
     theme_name_en: r.theme_name_en ?? undefined,
+    // ฐานข้อมูลที่ยังไม่ได้รัน migrate-gemba-forms.sql ไม่มีคอลัมน์นี้ — ถือเป็นแบบ ใช่/ไม่ใช่/ไม่เกี่ยวข้อง
+    form_style: r.form_style ?? 'yes_no_na',
     is_active: toBool(r.is_active),
   };
 }
@@ -86,6 +88,7 @@ export function mapRecord(r) {
     actual_time: r.actual_time,
     actual_area_id: r.actual_area_id,
     theme_ids: splitList(r.theme_ids),
+    shift: r.shift ?? '',
     observation: r.observation ?? '',
     has_issue: toBool(r.has_issue),
     issue_summary: r.issue_summary ?? '',
@@ -157,6 +160,7 @@ export function mapChecklistItem(r) {
     id: r.id,
     theme_id: r.theme_id,
     item_code: r.item_code ?? '',
+    section: r.section ?? 'technical',
     question: r.question,
     question_en: r.question_en ?? undefined,
     default_severity: r.default_severity ?? 'medium',
@@ -181,6 +185,7 @@ export function mapFinding(r) {
     reported_at: r.reported_at,
     due_date: r.due_date,
     immediate_action: r.immediate_action ?? '',
+    corrective_action: r.corrective_action ?? '',
     assigned_manager_id: r.assigned_manager_id ?? null,
     assigned_supervisor_id: r.assigned_supervisor_id ?? null,
     assigned_at: r.assigned_at ?? null,

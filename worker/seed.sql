@@ -29,22 +29,9 @@ INSERT OR IGNORE INTO superusers (id, admin_code, full_name) VALUES
   ('su_T_815', 'T-815', 'นายวิภาวัส จันทะคาม');
 
 
--- ── หมวดตรวจความปลอดภัย 12 หมวด (แก้/เพิ่มได้ในหน้าตั้งค่า) ────────────────
--- แต่ละหมวดมีข้อตรวจของตัวเองอยู่ใน seed-safety.sql (ตาราง safety_checklist_items)
--- ผู้เดินเลือกหมวดตอนวางแผน แล้วหน้าบันทึกจะดึงข้อตรวจของหมวดนั้นมาให้ติ๊ก
-INSERT OR IGNORE INTO walk_themes (id, theme_name, theme_name_en, is_active) VALUES
-  ('th_01', '01-อุปกรณ์ป้องกันส่วนบุคคล (PPE)', '01-Personal Protective Equipment', 1),
-  ('th_02', '02-การ์ดเครื่องจักรและจุดหนีบ', '02-Machine Guarding', 1),
-  ('th_03', '03-ระบบไฟฟ้า', '03-Electrical Safety', 1),
-  ('th_04', '04-สารเคมีและ SDS', '04-Chemical & SDS', 1),
-  ('th_05', '05-อัคคีภัยและทางหนีไฟ', '05-Fire & Emergency Egress', 1),
-  ('th_06', '06-รถยก/MHE และการจราจร', '06-Forklift & Traffic', 1),
-  ('th_07', '07-การล็อกและแขวนป้าย (LOTO)', '07-Lockout / Tagout', 1),
-  ('th_08', '08-ที่สูงและที่อับอากาศ', '08-Work at Height & Confined Space', 1),
-  ('th_09', '09-5ส และความเป็นระเบียบ', '09-5S & Housekeeping', 1),
-  ('th_10', '10-การยศาสตร์และการยกเคลื่อนย้าย', '10-Ergonomics & Manual Handling', 1),
-  ('th_11', '11-พฤติกรรมความปลอดภัย (BBS)', '11-Behaviour Based Safety', 1),
-  ('th_12', '12-สิ่งแวดล้อมและของเสีย', '12-Environment & Waste', 1);
+-- ── หัวข้อ GEMBA WALK 13 หมวด ──────────────────────────────────────────────
+-- หัวข้อและข้อตรวจอยู่ใน seed-gemba-topics.sql (สร้างจากเอกสาร Excel ในโฟลเดอร์ "รายการที่ต้องตรวจสอบ")
+-- รันไฟล์นั้นต่อจาก seed-safety.sql
 
 
 -- ── พื้นที่เดิน 20 แห่ง = แผนก/สายการผลิตจริง ───────────────────────────────

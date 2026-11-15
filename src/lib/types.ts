@@ -36,11 +36,21 @@ export interface Area {
   is_active: boolean;
 }
 
+/**
+ * คอลัมน์สถานะของแบบฟอร์ม GEMBA WALK
+ *   yes_no_na  ใช่ / ไม่ใช่ / ไม่เกี่ยวข้อง  (แบบฟอร์มทั่วไป)
+ *   ok_nok     OK / NOK                     (แบบฟอร์ม EHS LPA)
+ */
+export type FormStyle = 'yes_no_na' | 'ok_nok';
+
+/** หัวข้อการเดิน = แบบฟอร์ม GEMBA WALK หนึ่งชุด (หนึ่งไฟล์ Excel) */
 export interface WalkTheme {
   id: string;
   theme_name: string;
   theme_name_en?: string;
   color?: string;
+  /** ไม่ระบุ = yes_no_na (ข้อมูลก่อนเปลี่ยนเป็นแบบฟอร์ม) */
+  form_style?: FormStyle;
   is_active: boolean;
 }
 
@@ -70,6 +80,9 @@ export interface WalkRecord {
   actual_area_id: string;
   /** สำหรับ Ad-hoc ที่ไม่มีแผน — เก็บหัวข้อไว้ในเรคคอร์ดเอง */
   theme_ids: string[];
+  /** ช่อง "กะ:" บนหัวแบบฟอร์ม */
+  shift?: string;
+  /** ช่อง "บันทึกข้อสังเกตเชิงบวก" ท้ายแบบฟอร์ม */
   observation: string;
   has_issue: boolean;
   issue_summary?: string;
@@ -226,11 +239,21 @@ export type FindingStatus = 'open' | 'assigned' | 'in_progress' | 'fixed' | 'clo
 
 export type ChecklistResultValue = 'pass' | 'fail' | 'na';
 
-/** ข้อตรวจในแม่แบบเช็คลิสต์ — ผูกกับหมวดความปลอดภัย (walk_themes) */
+/**
+ * ตารางในแบบฟอร์ม GEMBA WALK
+ *   technical   คำถามทางเทคนิค — ตอบ "ไม่ใช่"/NOK แล้วกลายเป็นใบแจ้งปัญหา
+ *   engagement  คำถามเพื่อสร้างความผูกพันของพนักงาน — pass = ถามแล้ว · fail = ยังไม่ได้ถาม
+ *               (ไม่นับเป็นข้อบกพร่อง และไม่เปิดใบแจ้ง)
+ */
+export type ChecklistSection = 'technical' | 'engagement';
+
+/** ข้อตรวจในแม่แบบเช็คลิสต์ — ผูกกับหัวข้อ GEMBA WALK (walk_themes) */
 export interface SafetyChecklistItem {
   id: string;
   theme_id: string;
   item_code: string;
+  /** ไม่ระบุ = technical (ข้อมูลก่อนเปลี่ยนเป็นแบบฟอร์ม) */
+  section?: ChecklistSection;
   question: string;
   question_en?: string;
   /** ความรุนแรงตั้งต้นเมื่อข้อนี้ไม่ผ่าน */
@@ -269,6 +292,8 @@ export interface SafetyFinding {
   due_date: ISODate;
   /** สิ่งที่ทำทันทีหน้างานเพื่อกันอันตรายเฉพาะหน้า */
   immediate_action: string;
+  /** คอลัมน์ "การดำเนินการแก้ไข" ในตารางปัญหาที่ตรวจพบ — สิ่งที่ผู้ตรวจกำหนดให้เจ้าของงานทำ */
+  corrective_action?: string;
 
   assigned_manager_id: string | null;
   assigned_supervisor_id: string | null;
