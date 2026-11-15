@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { BrandLogo } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
-import { useSession } from '@/hooks/useData';
+import { useAccess, useSession } from '@/hooks/useData';
 import { loginAdmin } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
@@ -13,10 +13,17 @@ export default function AdminGate() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const toast = useToast();
-  const { admin } = useSession();
-  const [code, setCode] = useState('');
+  const { admin, session } = useSession();
+  const access = useAccess();
+  // ผู้ถือบทบาท admin ที่ล็อกอินอยู่แล้ว (เช่น T-815) ไม่ต้องพิมพ์รหัสซ้ำ — กดเข้าได้เลย
+  const isRoleAdmin = Boolean(session && access.can('admin.settings'));
+  const [code, setCode] = useState(() => (isRoleAdmin && session ? session.manager_code : ''));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // ทะเบียนสิทธิ์โหลดตามมาทีหลัง — เติมรหัสให้ตอนรู้แล้วว่าเป็นผู้ดูแล ถ้ายังไม่ได้พิมพ์อะไรเอง
+  useEffect(() => {
+    if (isRoleAdmin && session) setCode((c) => c || session.manager_code);
+  }, [isRoleAdmin, session]);
 
   if (admin) return <Navigate to="/admin/settings" replace />;
 

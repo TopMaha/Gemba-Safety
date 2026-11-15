@@ -1,6 +1,6 @@
 import type { Db } from './types';
 import { buildAreas, buildManagers, buildSuperusers } from './roster';
-import { SAFETY_THEMES, buildChecklist, buildPermissions, buildRoles } from './safetySeed';
+import { SAFETY_THEMES, buildChecklist, buildInitialUserRoles, buildPermissions, buildRoles } from './safetySeed';
 
 /**
  * ข้อมูลตั้งต้นตอนเปิดแอปครั้งแรก — ทะเบียนผู้ใช้/พื้นที่/หมวด/เช็คลิสต์/บทบาทเท่านั้น
@@ -23,11 +23,11 @@ export function buildSeedDb(): Db {
     login_history: [],
 
     // ── สิทธิ์ผู้ใช้งาน ──
-    // roles/permissions มีค่าตั้งต้นให้ครบ ส่วน user_roles ตั้งใจเว้นว่าง
-    // ระหว่างที่ยังว่าง ทุกคนที่ล็อกอินได้จะได้บทบาทตาม default_role_code
+    // roles/permissions มีค่าตั้งต้นให้ครบ ส่วน user_roles มีแค่ T-815 เป็นผู้ดูแล (ตรงกับ worker/grant-t815-admin.sql)
+    // คนที่ยังไม่ถูกใส่ไว้ในทะเบียน จะได้บทบาทตาม default_role_code
     roles: buildRoles(),
     permissions: buildPermissions(),
-    user_roles: [],
+    user_roles: buildInitialUserRoles(new Date().toISOString()),
 
     // ── งานความปลอดภัย ──
     safety_checklist_items: buildChecklist(),

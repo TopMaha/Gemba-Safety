@@ -15,7 +15,7 @@ import {
 import { useState, type ComponentType } from 'react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useI18n, type TKey } from '@/lib/i18n';
-import { useSession } from '@/hooks/useData';
+import { useAccess, useSession } from '@/hooks/useData';
 import { cn } from '@/lib/utils';
 
 interface Item {
@@ -46,8 +46,11 @@ const SECONDARY: Item[] = [
 export function BottomNav() {
   const { t } = useI18n();
   const { session, admin } = useSession();
+  const access = useAccess();
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
+  // ผู้ถือบทบาท admin (เช่น T-815) ที่ยังไม่ได้เข้าโหมดผู้ดูแล — ให้ทางลัดไปหน้าเข้าโหมดผู้ดูแล
+  const adminShortcut = !admin && Boolean(session) && access.can('admin.settings');
 
   const canDash = session?.dashboard_enabled || admin;
   const items = canDash ? [...PRIMARY, DASHBOARD] : PRIMARY;
@@ -57,7 +60,9 @@ export function BottomNav() {
         { to: '/admin/roles', key: 'nav.roles' as TKey, icon: KeyRound },
         { to: '/admin/settings', key: 'nav.settings' as TKey, icon: Shield },
       ]
-    : SECONDARY;
+    : adminShortcut
+      ? [...SECONDARY, { to: '/admin', key: 'nav.admin' as TKey, icon: Shield }]
+      : SECONDARY;
   const moreActive = secondary.some((s) => location.pathname.startsWith(s.to));
 
   return (

@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject, type TextareaHTMLAttributes } from 'react';
-import { Camera, CheckCheck, CheckCircle2, ChevronDown, CircleDashed, Link2, MinusCircle, Plus, Trash2, XCircle } from 'lucide-react';
+import { Camera, CheckCheck, CheckCircle2, ChevronDown, CircleDashed, Link2, MessageSquarePlus, MinusCircle, Plus, Trash2, XCircle } from 'lucide-react';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { ManagerSelect, SeveritySelect } from '@/components/safety/FindingDialogs';
 import { Button } from '@/components/ui/button';
@@ -232,9 +232,13 @@ function ProgressBar({ stats }: { stats: TopicStats }) {
 
 /* ── ตารางคำถาม (ทางเทคนิค / ความผูกพันพนักงาน) ──────────────────────────── */
 
-/** กริดของแถว: มือถือ 2 คอลัมน์ (เลขข้อ + เนื้อหาซ้อนสามบรรทัด) · จอกว้าง 4 คอลัมน์แบบเอกสาร */
+/**
+ * กริดของแถว
+ *   มือถือ   # · คำถาม · ปุ่มสถานะเรียงตั้งชิดขวา — ความคิดเห็นพับไว้ใต้คำถาม เปิดเมื่อจำเป็น
+ *   จอกว้าง  # · คำถาม · สถานะ · ความคิดเห็น  (4 คอลัมน์แบบเอกสาร)
+ */
 const Q_GRID =
-  'grid grid-cols-[36px_minmax(0,1fr)] lg:grid-cols-[44px_minmax(0,1fr)_minmax(250px,276px)_minmax(0,0.8fr)]';
+  'grid grid-cols-[30px_minmax(0,1fr)_96px] lg:grid-cols-[44px_minmax(0,1fr)_minmax(250px,276px)_minmax(0,0.8fr)]';
 
 function QuestionTable({
   section,
@@ -259,106 +263,138 @@ function QuestionTable({
   const options = statusOptions(section, style);
   const heading =
     section === 'engagement' ? t('gemba.engagement') : style === 'ok_nok' ? t('gemba.lpaItems') : t('gemba.technical');
-  const statusHead =
-    section === 'engagement'
-      ? `${t('gemba.asked')} ${t('gemba.askedYesNo')}`
-      : `${t('gemba.status')} ${t(style === 'ok_nok' ? 'gemba.statusOkNok' : 'gemba.statusYesNoNa')}`;
+  const statusShort = section === 'engagement' ? t('gemba.asked') : t('gemba.status');
+  const statusHint =
+    section === 'engagement' ? t('gemba.askedYesNo') : t(style === 'ok_nok' ? 'gemba.statusOkNok' : 'gemba.statusYesNoNa');
   const unanswered = items.filter((i) => !state.answers[i.id]).length;
   const passLabel = t(resultLabelKey('pass', style, section));
 
-  return (
-    <div role="table" aria-label={heading} className="overflow-hidden rounded-md border bg-card">
-      {/* หัวตาราง — แถบกรมท่าเหมือนหัวตารางในเอกสาร */}
-      <div role="row" className={cn(Q_GRID, 'bg-primary text-[12px] font-semibold text-primary-foreground')}>
-        <span role="columnheader" className="flex items-center justify-center px-1 py-2.5">#</span>
-        <span role="columnheader" className="flex items-center gap-2 px-3 py-2.5">
-          <span className="min-w-0 flex-1">{heading}</span>
-          {onFillRest && unanswered > 0 ? (
-            <button
-              type="button"
-              onClick={onFillRest}
-              className="press focusable -my-1 flex min-h-[36px] shrink-0 items-center gap-1 rounded-sm border border-primary-foreground/30 px-2 text-[11px] font-medium hover:bg-primary-foreground/10 lg:hidden"
-            >
-              <CheckCheck className="h-3.5 w-3.5" aria-hidden />
-              {t('gemba.markRest', { label: passLabel })}
-            </button>
-          ) : null}
-        </span>
-        <span role="columnheader" className="hidden items-center gap-2 border-l border-primary-foreground/15 px-3 py-2.5 lg:flex">
-          <span className="min-w-0 flex-1 leading-tight">{statusHead}</span>
-        </span>
-        <span role="columnheader" className="hidden items-center justify-between gap-2 border-l border-primary-foreground/15 px-3 py-2.5 lg:flex">
-          {t('gemba.comment')}
-          {onFillRest && unanswered > 0 ? (
-            <button
-              type="button"
-              onClick={onFillRest}
-              className="press focusable -my-1 flex min-h-[32px] shrink-0 items-center gap-1 rounded-sm border border-primary-foreground/30 px-2 text-[11px] font-medium hover:bg-primary-foreground/10"
-            >
-              <CheckCheck className="h-3.5 w-3.5" aria-hidden />
-              {t('gemba.markRest', { label: passLabel })}
-            </button>
-          ) : null}
-        </span>
-      </div>
+  // มือถือ: ช่องความคิดเห็นที่ผู้ตรวจกดเปิดเอง (ข้อ "ไม่ใช่" และข้อที่มีข้อความอยู่แล้วเปิดให้เสมอ)
+  const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set());
+  const noteRefs = useRef(new Map<string, HTMLTextAreaElement>());
+  const [focusNote, setFocusNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusNote) return;
+    noteRefs.current.get(focusNote)?.focus();
+    setFocusNote(null);
+  }, [focusNote]);
 
-      {items.map((item, idx) => {
-        const n = idx + 1;
-        const a = state.answers[item.id];
-        const missing = showMissing && !a;
-        const question = lang === 'en' ? item.question_en || item.question : item.question;
-        return (
-          <div
-            key={item.id}
-            role="row"
-            data-missing={missing || undefined}
-            className={cn(
-              Q_GRID,
-              'border-t transition-colors',
-              a?.result === 'fail' && section === 'technical' ? 'bg-bad/[0.045]' : '',
-              missing ? 'bg-warn/[0.09]' : '',
-            )}
+  const fillRest =
+    onFillRest && unanswered > 0 ? (
+      <button
+        type="button"
+        onClick={onFillRest}
+        className="press focusable flex min-h-[36px] shrink-0 items-center gap-1 rounded-sm border border-primary-foreground/30 px-2 text-[11px] font-medium hover:bg-primary-foreground/10"
+      >
+        <CheckCheck className="h-3.5 w-3.5" aria-hidden />
+        {t('gemba.markRest', { label: passLabel })}
+      </button>
+    ) : null;
+
+  return (
+    <div className="overflow-hidden rounded-md border bg-card">
+      {/* มือถือ: ปุ่มลัดอยู่เหนือหัวตาราง เพราะหัวตารางแคบเกินจะใส่ปุ่มได้ */}
+      {fillRest ? <div className="flex justify-end bg-primary px-2 pt-2 text-primary-foreground lg:hidden">{fillRest}</div> : null}
+      <div role="table" aria-label={heading}>
+        {/* หัวตาราง — แถบกรมท่าเหมือนหัวตารางในเอกสาร */}
+        <div role="row" className={cn(Q_GRID, 'bg-primary text-[12px] font-semibold text-primary-foreground')}>
+          <span role="columnheader" className="flex items-center justify-center px-1 py-2.5">#</span>
+          <span role="columnheader" className="flex items-center px-2.5 py-2.5 lg:px-3">{heading}</span>
+          <span
+            role="columnheader"
+            className="flex flex-col justify-center border-l border-primary-foreground/15 px-1.5 py-2 text-center leading-tight lg:flex-row lg:items-center lg:justify-start lg:gap-1 lg:px-3 lg:text-left"
           >
-            <span
-              role="rowheader"
+            <span>{statusShort}</span>
+            <span className="text-[10px] font-normal opacity-80 lg:text-[12px] lg:font-semibold lg:opacity-100">{statusHint}</span>
+          </span>
+          <span role="columnheader" className="hidden items-center justify-between gap-2 border-l border-primary-foreground/15 px-3 py-2 lg:flex">
+            {t('gemba.comment')}
+            {fillRest}
+          </span>
+        </div>
+
+        {items.map((item, idx) => {
+          const n = idx + 1;
+          const a = state.answers[item.id];
+          const missing = showMissing && !a;
+          const question = lang === 'en' ? item.question_en || item.question : item.question;
+          const noteShown = Boolean(a && (a.result === 'fail' || a.note || openNotes.has(item.id)));
+          return (
+            <div
+              key={item.id}
+              role="row"
+              data-missing={missing || undefined}
               className={cn(
-                'num row-span-3 flex justify-center border-r bg-muted/50 px-1 pt-3 text-[12px] text-muted-foreground lg:row-span-1 lg:items-start',
-                a ? '' : 'font-semibold text-foreground',
+                Q_GRID,
+                'border-t transition-colors',
+                a?.result === 'fail' && section === 'technical' ? 'bg-bad/[0.045]' : '',
+                missing ? 'bg-warn/[0.09]' : '',
               )}
             >
-              {n}
-            </span>
-            <span role="cell" className="col-start-2 px-3 pb-1 pt-3 text-[13px] leading-relaxed lg:pb-3">
-              {question}
-              {missing ? (
-                <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-medium text-warn">
-                  <CircleDashed className="h-3 w-3" aria-hidden />
-                  {t('gemba.unanswered')}
-                </span>
-              ) : null}
-            </span>
-            <span role="cell" className="col-start-2 px-3 py-1.5 lg:col-start-3 lg:row-start-1 lg:border-l lg:py-2.5">
-              <StatusButtons
-                options={options}
-                style={style}
-                section={section}
-                value={a?.result}
-                label={t('gemba.statusFor', { n })}
-                onChange={(r) => onAnswer(item, r === a?.result ? null : r)}
-              />
-            </span>
-            <span role="cell" className="col-start-2 px-3 pb-3 pt-1 lg:col-start-4 lg:row-start-1 lg:border-l lg:px-1.5 lg:py-1.5">
-              <CellTextarea
-                value={a?.note ?? ''}
-                disabled={!a}
-                onChange={(e) => onNote(item.id, e.target.value)}
-                placeholder={a ? t('gemba.comment') : '—'}
-                aria-label={t('gemba.commentFor', { n })}
-              />
-            </span>
-          </div>
-        );
-      })}
+              <span
+                role="rowheader"
+                className={cn(
+                  'num row-span-2 flex justify-center border-r bg-muted/50 px-0.5 pt-3 text-[12px] text-muted-foreground lg:row-span-1',
+                  a ? '' : 'font-semibold text-foreground',
+                )}
+              >
+                {n}
+              </span>
+              <span role="cell" className="col-start-2 row-start-1 px-2.5 py-2.5 text-[13px] leading-relaxed lg:px-3 lg:py-3">
+                {question}
+                {missing ? (
+                  <span className="ml-2 inline-flex items-center gap-1 align-middle text-[11px] font-medium text-warn">
+                    <CircleDashed className="h-3 w-3" aria-hidden />
+                    {t('gemba.unanswered')}
+                  </span>
+                ) : null}
+                {a && !noteShown ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenNotes((prev) => new Set(prev).add(item.id));
+                      setFocusNote(item.id);
+                    }}
+                    className="press focusable mt-0.5 flex min-h-[36px] items-center gap-1 rounded-sm text-[12px] font-medium text-accent lg:hidden"
+                  >
+                    <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden />
+                    {t('gemba.addComment')}
+                  </button>
+                ) : null}
+              </span>
+              <span role="cell" className="col-start-3 row-start-1 border-l px-1.5 py-2 lg:px-3 lg:py-2.5">
+                <StatusButtons
+                  options={options}
+                  style={style}
+                  section={section}
+                  value={a?.result}
+                  label={t('gemba.statusFor', { n })}
+                  onChange={(r) => onAnswer(item, r === a?.result ? null : r)}
+                />
+              </span>
+              <span
+                role="cell"
+                className={cn(
+                  'col-span-2 col-start-2 row-start-2 px-2.5 pb-2.5 lg:col-span-1 lg:col-start-4 lg:row-start-1 lg:block lg:border-l lg:px-1.5 lg:py-1.5',
+                  noteShown ? '' : 'hidden',
+                )}
+              >
+                <CellTextarea
+                  ref={(el) => {
+                    if (el) noteRefs.current.set(item.id, el);
+                    else noteRefs.current.delete(item.id);
+                  }}
+                  value={a?.note ?? ''}
+                  disabled={!a}
+                  onChange={(e) => onNote(item.id, e.target.value)}
+                  placeholder={a ? t('gemba.comment') : '—'}
+                  aria-label={t('gemba.commentFor', { n })}
+                />
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -383,7 +419,11 @@ function StatusButtons({
   // สองปุ่มมีที่พอ ใส่ไอคอนช่วยแยกด้วย (ความหมายไม่ได้ขึ้นกับสีอย่างเดียวทั้งสองแบบ เพราะมีคำกำกับเสมอ)
   const withIcon = options.length < 3;
   return (
-    <div role="group" aria-label={label} className={cn('grid gap-1.5', options.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
+    <div
+      role="group"
+      aria-label={label}
+      className={cn('grid grid-cols-1 gap-1 lg:gap-1.5', options.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}
+    >
       {options.map((r) => {
         const Icon = RESULT_ICON[r];
         const selected = value === r;
@@ -394,7 +434,7 @@ function StatusButtons({
             aria-pressed={selected}
             onClick={() => onChange(r)}
             className={cn(
-              'press focusable flex h-11 min-w-0 items-center justify-center gap-1 rounded-md border px-1 text-[12px] font-medium',
+              'press focusable flex h-10 min-w-0 items-center justify-center gap-1 rounded-md border px-1 text-[12px] font-medium lg:h-11',
               selected ? RESULT_ON[r] : 'bg-card text-muted-foreground hover:border-foreground/25 hover:text-foreground',
             )}
           >

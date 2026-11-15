@@ -134,7 +134,22 @@ cd worker && npx wrangler d1 execute gemba-safety --remote --file=./seed-gemba-t
 cd worker && npx wrangler d1 execute gemba-safety --remote --command "SELECT (SELECT COUNT(*) FROM managers) mgrs, (SELECT COUNT(*) FROM areas) areas, (SELECT COUNT(*) FROM walk_themes) themes, (SELECT COUNT(*) FROM safety_checklist_items) items, (SELECT COUNT(*) FROM roles) roles, (SELECT COUNT(*) FROM permissions) perms"
 ```
 
-### 2.7 อัปเกรดเป็นแบบฟอร์ม GEMBA WALK (ฐานข้อมูลที่ใช้งานอยู่แล้ว) — ⏳ ยังไม่ได้ทำ
+### 2.8 พื้นที่ 8 แห่ง + ตั้ง T-815 เป็นผู้ดูแล
+
+ข้อมูลล้วน ไม่มีคอลัมน์ใหม่ จึงรันก่อนหรือหลัง deploy ก็ได้ และรันซ้ำได้
+
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --file=./migrate-areas-8.sql
+```
+
+```bash
+cd worker && npx wrangler d1 execute gemba-safety --remote --file=./grant-t815-admin.sql
+```
+
+ผลที่ได้: พื้นที่ที่เปิดใช้เหลือ VSM1–VSM4 · QC · MTN · คลังสินค้า · Office (อีก 13 แห่งปิดไว้ ไม่ได้ลบ)
+และ T-815 ถือบทบาท admin ทั้งโรงงาน
+
+### 2.7 อัปเกรดเป็นแบบฟอร์ม GEMBA WALK (ฐานข้อมูลที่ใช้งานอยู่แล้ว) — ✅ ทำแล้ว 16 พ.ย. 2569
 
 ทำตามลำดับนี้เท่านั้น — Worker ตัวใหม่เขียนคอลัมน์ใหม่ ถ้า deploy ก่อนเพิ่มคอลัมน์ การบันทึกการเดินจะล้ม
 และหน้าเว็บตัวใหม่ต้องการหัวข้อ 13 หมวดจากเซิร์ฟเวอร์

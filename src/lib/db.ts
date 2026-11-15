@@ -1,5 +1,7 @@
 import { ONLINE_MODE } from './config';
 import { GEMBA_TOPICS, LEGACY_THEME_IDS, buildGembaChecklist } from './gembaTopics';
+import { buildAreas } from './roster';
+import { buildInitialUserRoles } from './safetySeed';
 import { buildSeedDb } from './seed';
 import { STORAGE_KEYS } from './storageKeys';
 import type { Db } from './types';
@@ -66,7 +68,27 @@ function heal(db: Db): Db {
   }
   db.app_settings = { ...seed.app_settings, ...db.app_settings };
   adoptGembaTopics(db);
+  adoptEightAreasAndAdmin(db);
   return db;
+}
+
+/**
+ * พื้นที่เดินเหลือ 8 แห่ง + T-815 เป็นผู้ดูแล — ทำแบบเดียวกับ worker/migrate-areas-8.sql และ grant-t815-admin.sql
+ * เฉพาะโหมดในเครื่อง (โหมดออนไลน์ได้ของจริงจากเซิร์ฟเวอร์) และทำครั้งเดียว: ดูจากว่ามีพื้นที่ Office แล้วหรือยัง
+ */
+function adoptEightAreasAndAdmin(db: Db) {
+  if (ONLINE_MODE || db.areas.some((a) => a.id === 'ar_office')) return;
+  const seeded = new Map(buildAreas().map((a) => [a.id, a]));
+  db.areas = [
+    ...db.areas.map((a) => {
+      const s = seeded.get(a.id);
+      return s ? { ...a, area_name: s.area_name, area_name_en: s.area_name_en, is_active: s.is_active } : a;
+    }),
+    ...[...seeded.values()].filter((s) => !db.areas.some((a) => a.id === s.id)),
+  ];
+  for (const ur of buildInitialUserRoles(new Date().toISOString())) {
+    if (!db.user_roles.some((x) => x.manager_id === ur.manager_id && x.role_id === ur.role_id)) db.user_roles.push(ur);
+  }
 }
 
 /**

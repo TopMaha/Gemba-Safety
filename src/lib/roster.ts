@@ -412,30 +412,35 @@ const PEOPLE: PersonRow[] = [
   ['Temp117', 'นายคมกริช มุ่งงาม', 'VSM4', 'พนักงาน', 0],
 ];
 
-/** [รหัสพื้นที่, ชื่อไทย, ชื่ออังกฤษ, แผนกที่ดูแล] — หนึ่งแผนก/สายการผลิต = หนึ่งพื้นที่ */
-type AreaRow = [id: string, nameTh: string, nameEn: string, dept: string];
+/**
+ * [รหัสพื้นที่, ชื่อไทย, ชื่ออังกฤษ, แผนกที่ดูแล, เปิดใช้งาน] — หนึ่งแผนก/สายการผลิต = หนึ่งพื้นที่
+ * เดินตรวจเหลือ 8 แห่ง (VSM1–VSM4 · QC · MTN · คลังสินค้า · Office) ที่เหลือปิดไว้เพราะประวัติเก่าอ้างถึง
+ * ⚠️ ต้องตรงกับ worker/seed.sql และ worker/migrate-areas-8.sql
+ */
+type AreaRow = [id: string, nameTh: string, nameEn: string, dept: string, active: boolean];
 
 const AREAS: AreaRow[] = [
-  ['ar_vsm1', 'สายการผลิต VSM1', 'VSM1', 'VSM1'],
-  ['ar_vsm2', 'สายการผลิต VSM2', 'VSM2', 'VSM2'],
-  ['ar_vsm3', 'สายการผลิต VSM3', 'VSM3', 'VSM3'],
-  ['ar_vsm4', 'สายการผลิต VSM4', 'VSM4', 'VSM4'],
-  ['ar_qc', 'ควบคุมคุณภาพ', 'Quality Control', 'Quality Control'],
-  ['ar_qa', 'ประกันคุณภาพ', 'Quality Assurance', 'Quality Assurance'],
-  ['ar_maint', 'ซ่อมบำรุง', 'Maintenance', 'Maintenance'],
-  ['ar_proc', 'วิศวกรรมกระบวนการ', 'Process Engineer', 'Process Engineer'],
-  ['ar_eng', 'วิศวกรรม', 'Engineer', 'Engineer'],
-  ['ar_wh', 'คลังสินค้า', 'Warehouse', 'Warehouse'],
-  ['ar_store', 'สโตร์/คลังอะไหล่', 'Store', 'Store'],
-  ['ar_pc', 'วางแผนการผลิต', 'Production Control', 'PC'],
-  ['ar_lean', 'ลีน', 'Lean', 'Lean'],
-  ['ar_ehs', 'ความปลอดภัยและสิ่งแวดล้อม', 'EHS', 'EHS'],
-  ['ar_hr', 'ทรัพยากรบุคคล', 'Human Resources', 'HR'],
-  ['ar_it', 'เทคโนโลยีสารสนเทศ', 'IT', 'IT'],
-  ['ar_acc', 'บัญชีและการเงิน', 'Accounting', 'Accounting'],
-  ['ar_pur', 'จัดซื้อ', 'Purchasing', 'Purchasing'],
-  ['ar_prog', 'โปรแกรมงานใหม่', 'Program', 'Program'],
-  ['ar_cs', 'ลูกค้าสัมพันธ์', 'Customer Service', 'Customer Service'],
+  ['ar_vsm1', 'สายการผลิต VSM1', 'VSM1', 'VSM1', true],
+  ['ar_vsm2', 'สายการผลิต VSM2', 'VSM2', 'VSM2', true],
+  ['ar_vsm3', 'สายการผลิต VSM3', 'VSM3', 'VSM3', true],
+  ['ar_vsm4', 'สายการผลิต VSM4', 'VSM4', 'VSM4', true],
+  ['ar_qc', 'ควบคุมคุณภาพ (QC)', 'Quality Control (QC)', 'Quality Control', true],
+  ['ar_qa', 'ประกันคุณภาพ', 'Quality Assurance', 'Quality Assurance', false],
+  ['ar_maint', 'ซ่อมบำรุง (MTN)', 'Maintenance (MTN)', 'Maintenance', true],
+  ['ar_proc', 'วิศวกรรมกระบวนการ', 'Process Engineer', 'Process Engineer', false],
+  ['ar_eng', 'วิศวกรรม', 'Engineer', 'Engineer', false],
+  ['ar_wh', 'คลังสินค้า (Warehouse)', 'Warehouse', 'Warehouse', true],
+  ['ar_store', 'สโตร์/คลังอะไหล่', 'Store', 'Store', false],
+  ['ar_pc', 'วางแผนการผลิต', 'Production Control', 'PC', false],
+  ['ar_lean', 'ลีน', 'Lean', 'Lean', false],
+  ['ar_ehs', 'ความปลอดภัยและสิ่งแวดล้อม', 'EHS', 'EHS', false],
+  ['ar_hr', 'ทรัพยากรบุคคล', 'Human Resources', 'HR', false],
+  ['ar_it', 'เทคโนโลยีสารสนเทศ', 'IT', 'IT', false],
+  ['ar_acc', 'บัญชีและการเงิน', 'Accounting', 'Accounting', false],
+  ['ar_pur', 'จัดซื้อ', 'Purchasing', 'Purchasing', false],
+  ['ar_prog', 'โปรแกรมงานใหม่', 'Program', 'Program', false],
+  ['ar_cs', 'ลูกค้าสัมพันธ์', 'Customer Service', 'Customer Service', false],
+  ['ar_office', 'สำนักงาน (Office)', 'Office', 'Office', true],
 ];
 
 /** ผู้ดูแลระบบ เข้าที่ /admin ด้วยรหัสพนักงานของตัวเอง — [รหัส, ชื่อ] */
@@ -477,13 +482,13 @@ export function buildManagers(createdAt: string): Manager[] {
 }
 
 export function buildAreas(): Area[] {
-  return AREAS.map(([id, nameTh, nameEn, dept]) => ({
+  return AREAS.map(([id, nameTh, nameEn, dept, active]) => ({
     id,
     area_name: nameTh,
     area_name_en: nameEn,
     parent_id: null,
     department: dept,
-    is_active: true,
+    is_active: active,
   }));
 }
 

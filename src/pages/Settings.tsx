@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Database, Download, Layers, MapPin, Megaphone, Pencil, Plus, RefreshCw, Trash2, Upload, Users } from 'lucide-react';
 import { PageTitle } from '@/components/ManagerShell';
+import { TeamPlansTab } from '@/components/admin/TeamPlansTab';
+import { WalkersTab } from '@/components/admin/WalkersTab';
 import { ChecklistAdminTab } from '@/components/safety/ChecklistAdmin';
 import { ThemePicker } from '@/components/ThemePicker';
 import { Badge } from '@/components/ui/badge';
@@ -45,9 +47,11 @@ export default function Settings() {
   return (
     <div>
       <PageTitle title={t('nav.settings')} subtitle={t('admin.title')} />
-      <Tabs defaultValue="users">
+      <Tabs defaultValue="walkers">
         <div className="scroll-x no-scrollbar -mx-3 mb-4 px-3">
           <TabsList>
+            <TabsTrigger value="walkers">{t('team.tabWalkers')}</TabsTrigger>
+            <TabsTrigger value="teamPlans">{t('team.tabPlans')}</TabsTrigger>
             <TabsTrigger value="users">{t('admin.tabUsers')}</TabsTrigger>
             <TabsTrigger value="areas">{t('admin.tabAreas')}</TabsTrigger>
             <TabsTrigger value="themes">{t('admin.tabThemes')}</TabsTrigger>
@@ -57,6 +61,8 @@ export default function Settings() {
           </TabsList>
         </div>
 
+        <TabsContent value="walkers"><WalkersTab /></TabsContent>
+        <TabsContent value="teamPlans"><TeamPlansTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="areas"><AreasTab /></TabsContent>
         <TabsContent value="themes"><ThemesTab /></TabsContent>

@@ -1,5 +1,5 @@
 import { GEMBA_TOPICS, buildGembaChecklist } from './gembaTopics';
-import type { Permission, Role, SafetyChecklistItem, WalkTheme } from './types';
+import type { Permission, Role, SafetyChecklistItem, UserRole, WalkTheme } from './types';
 
 /**
  * ── ข้อมูลตั้งต้นของงานความปลอดภัย (สำเนาในเครื่อง) ──────────────────────
@@ -105,6 +105,27 @@ export function buildRoles(): Role[] {
       id: 'role_viewer', role_code: 'viewer', role_name: 'ผู้ดูอย่างเดียว', role_name_en: 'Viewer',
       description: 'ดูแดชบอร์ดและรายงานได้ แต่แก้ไขอะไรไม่ได้',
       is_system: true, sort_order: 60, perm_codes: ['dashboard.view', 'report.view'],
+    },
+  ];
+}
+
+/**
+ * ทะเบียนสิทธิ์รายคนตั้งต้น — T-815 เป็นผู้ดูแลระบบทั้งโรงงานไปก่อน
+ * ⚠️ ต้องตรงกับ worker/grant-t815-admin.sql (id เดียวกัน)
+ */
+export const INITIAL_ADMIN_CODE = 'T-815';
+
+export function buildInitialUserRoles(now: string): UserRole[] {
+  const managerId = `mgr_${INITIAL_ADMIN_CODE.replace(/[^A-Za-z0-9]/g, '_')}`;
+  return [
+    {
+      id: `ur_${managerId}_admin`,
+      manager_id: managerId,
+      role_id: 'role_admin',
+      role_code: 'admin',
+      scope_area_id: '*',
+      granted_by: 'ตั้งค่าเริ่มต้น',
+      granted_at: now,
     },
   ];
 }

@@ -29,6 +29,11 @@
     --ring: 226 70% 46%;
     --shadow: 226 50% 22%;
     --grid: 220 50% 90%;
+    /* สถานะใบแจ้งในกราฟ — ผ่านตัวตรวจสีของ dataviz (แยกออกแม้ตาบอดสี) · ok/warn/bad สงวนไว้สื่อความหมาย ไม่ใช้เป็นสีชุดข้อมูล */
+    --chart-open: #eb6834;
+    --chart-working: #2a78d6;
+    --chart-waiting: #eda100;
+    --chart-closed: #1baf7a;
   }
 
   .dark {
@@ -52,6 +57,10 @@
     --ring: 222 84% 66%;
     --shadow: 226 70% 2%;
     --grid: 226 30% 16%;
+    --chart-open: #d95926;
+    --chart-working: #3987e5;
+    --chart-waiting: #c98500;
+    --chart-closed: #199e70;
   }
 
   * { @apply border-border; }

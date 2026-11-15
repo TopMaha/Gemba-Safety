@@ -24,7 +24,8 @@ export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'press focusable rounded-[5px] px-3 py-1.5 text-[13px] font-medium text-muted-foreground',
+        // ไม่ตัดคำ — แถบแท็บยาว (เช่นหน้าตั้งค่า) เลื่อนซ้ายขวาเอา ดีกว่าป้ายแตกเป็นสามบรรทัดบนมือถือ
+        'press focusable min-h-[36px] whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[13px] font-medium text-muted-foreground',
         'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-panel',
         className,
       )}

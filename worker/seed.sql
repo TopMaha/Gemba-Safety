@@ -34,29 +34,30 @@ INSERT OR IGNORE INTO superusers (id, admin_code, full_name) VALUES
 -- รันไฟล์นั้นต่อจาก seed-safety.sql
 
 
--- ── พื้นที่เดิน 20 แห่ง = แผนก/สายการผลิตจริง ───────────────────────────────
--- ทุกแห่งเป็นระดับบนสุด (parent_id = NULL) แบ่งพื้นที่ย่อยเพิ่มได้ในหน้าตั้งค่า
+-- ── พื้นที่เดิน 8 แห่งที่เปิดใช้: VSM1–VSM4 · QC · MTN · คลังสินค้า · Office ─────────
+-- แถวที่ is_active = 0 คือพื้นที่เดิมที่เลิกเดินแล้ว เก็บไว้เพราะประวัติเก่าอ้างถึง (ดู migrate-areas-8.sql)
 INSERT OR IGNORE INTO areas (id, area_name, area_name_en, parent_id, department, is_active) VALUES
   ('ar_vsm1', 'สายการผลิต VSM1', 'VSM1', NULL, 'VSM1', 1),
   ('ar_vsm2', 'สายการผลิต VSM2', 'VSM2', NULL, 'VSM2', 1),
   ('ar_vsm3', 'สายการผลิต VSM3', 'VSM3', NULL, 'VSM3', 1),
   ('ar_vsm4', 'สายการผลิต VSM4', 'VSM4', NULL, 'VSM4', 1),
-  ('ar_qc', 'ควบคุมคุณภาพ', 'Quality Control', NULL, 'Quality Control', 1),
-  ('ar_qa', 'ประกันคุณภาพ', 'Quality Assurance', NULL, 'Quality Assurance', 1),
-  ('ar_maint', 'ซ่อมบำรุง', 'Maintenance', NULL, 'Maintenance', 1),
-  ('ar_proc', 'วิศวกรรมกระบวนการ', 'Process Engineer', NULL, 'Process Engineer', 1),
-  ('ar_eng', 'วิศวกรรม', 'Engineer', NULL, 'Engineer', 1),
-  ('ar_wh', 'คลังสินค้า', 'Warehouse', NULL, 'Warehouse', 1),
-  ('ar_store', 'สโตร์/คลังอะไหล่', 'Store', NULL, 'Store', 1),
-  ('ar_pc', 'วางแผนการผลิต', 'Production Control', NULL, 'PC', 1),
-  ('ar_lean', 'ลีน', 'Lean', NULL, 'Lean', 1),
-  ('ar_ehs', 'ความปลอดภัยและสิ่งแวดล้อม', 'EHS', NULL, 'EHS', 1),
-  ('ar_hr', 'ทรัพยากรบุคคล', 'Human Resources', NULL, 'HR', 1),
-  ('ar_it', 'เทคโนโลยีสารสนเทศ', 'IT', NULL, 'IT', 1),
-  ('ar_acc', 'บัญชีและการเงิน', 'Accounting', NULL, 'Accounting', 1),
-  ('ar_pur', 'จัดซื้อ', 'Purchasing', NULL, 'Purchasing', 1),
-  ('ar_prog', 'โปรแกรมงานใหม่', 'Program', NULL, 'Program', 1),
-  ('ar_cs', 'ลูกค้าสัมพันธ์', 'Customer Service', NULL, 'Customer Service', 1);
+  ('ar_qc', 'ควบคุมคุณภาพ (QC)', 'Quality Control (QC)', NULL, 'Quality Control', 1),
+  ('ar_qa', 'ประกันคุณภาพ', 'Quality Assurance', NULL, 'Quality Assurance', 0),
+  ('ar_maint', 'ซ่อมบำรุง (MTN)', 'Maintenance (MTN)', NULL, 'Maintenance', 1),
+  ('ar_proc', 'วิศวกรรมกระบวนการ', 'Process Engineer', NULL, 'Process Engineer', 0),
+  ('ar_eng', 'วิศวกรรม', 'Engineer', NULL, 'Engineer', 0),
+  ('ar_wh', 'คลังสินค้า (Warehouse)', 'Warehouse', NULL, 'Warehouse', 1),
+  ('ar_store', 'สโตร์/คลังอะไหล่', 'Store', NULL, 'Store', 0),
+  ('ar_pc', 'วางแผนการผลิต', 'Production Control', NULL, 'PC', 0),
+  ('ar_lean', 'ลีน', 'Lean', NULL, 'Lean', 0),
+  ('ar_ehs', 'ความปลอดภัยและสิ่งแวดล้อม', 'EHS', NULL, 'EHS', 0),
+  ('ar_hr', 'ทรัพยากรบุคคล', 'Human Resources', NULL, 'HR', 0),
+  ('ar_it', 'เทคโนโลยีสารสนเทศ', 'IT', NULL, 'IT', 0),
+  ('ar_acc', 'บัญชีและการเงิน', 'Accounting', NULL, 'Accounting', 0),
+  ('ar_pur', 'จัดซื้อ', 'Purchasing', NULL, 'Purchasing', 0),
+  ('ar_prog', 'โปรแกรมงานใหม่', 'Program', NULL, 'Program', 0),
+  ('ar_cs', 'ลูกค้าสัมพันธ์', 'Customer Service', NULL, 'Customer Service', 0),
+  ('ar_office', 'สำนักงาน (Office)', 'Office', NULL, 'Office', 1);
 
 
 -- ── ผู้ใช้ 393 คน จากทะเบียนพนักงาน PSIF ──────────────────────────────────

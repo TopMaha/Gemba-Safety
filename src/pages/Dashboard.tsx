@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Lock, Medal, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Lock, Medal, TrendingUp } from 'lucide-react';
+import { BarList, ColumnChart, Meter, SegmentedBar, type BarRow, type Segment } from '@/components/charts';
 import { PageTitle } from '@/components/ManagerShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
   formatDate,
   formatMonth,
   formatRange,
+  formatWeekday,
   monthKey,
   rangeDays,
   startOfMonth,
@@ -103,6 +105,76 @@ export default function Dashboard() {
 
   const days = useMemo(() => rangeDays(from, to), [from, to]);
 
+  /* ── ข้อมูลของกราฟภาพรวม ── */
+
+  // ตัวเลขใหญ่: ของฉันถ้าล็อกอินเป็นผู้เดิน ไม่งั้น (โหมดผู้ดูแล) ของทั้งทีม
+  const headline = session ? myAdherence : teamAdherence;
+  // ไม่มีแผนในช่วงนี้ = ยังวัดไม่ได้ ไม่ใช่ 0% (แถบแดง 0% จะอ่านว่าทำไม่ได้ ทั้งที่ไม่มีอะไรให้ทำ)
+  const adherenceRows = [
+    ...(session ? [{ key: 'me', label: t('chart.adherenceMine'), pct: myAdherence.pct, total: myAdherence.total }] : []),
+    { key: 'team', label: t('chart.adherenceTeam'), pct: teamAdherence.pct, total: teamAdherence.total },
+  ];
+
+  const dayColumns = useMemo(
+    () =>
+      days.map((d, i) => {
+        const n = teamWalks.filter((r) => r.actual_date === d).length;
+        const day = Number(d.slice(8, 10));
+        return {
+          key: d,
+          // สัปดาห์: ชื่อวัน · เดือน: ทุก 5 วัน กันป้ายเบียดกัน
+          tick: scope === 'week' ? formatWeekday(d, lang) : i === 0 || day % 5 === 0 ? String(day) : '',
+          value: n,
+          readout: t('chart.dayValue', { date: formatDate(d, lang), n }),
+          mark: d === today,
+        };
+      }),
+    [days, teamWalks, scope, lang, t, today],
+  );
+
+  const statusSegments: Segment[] = useMemo(() => {
+    const all = (allFindings ?? []).filter((x) => x.status !== 'cancelled');
+    const n = (st: string[]) => all.filter((x) => st.includes(x.status)).length;
+    return [
+      { key: 'open', label: t('chart.stOpen'), value: n(['open']), color: 'var(--chart-open)' },
+      { key: 'working', label: t('chart.stWorking'), value: n(['assigned', 'in_progress']), color: 'var(--chart-working)' },
+      { key: 'waiting', label: t('chart.stWaiting'), value: n(['fixed']), color: 'var(--chart-waiting)', ink: 'black' },
+      { key: 'closed', label: t('chart.stClosed'), value: n(['closed']), color: 'var(--chart-closed)' },
+    ];
+  }, [allFindings, t]);
+  const statusTotal = statusSegments.reduce((sum, x) => sum + x.value, 0);
+  const statusAria = statusSegments.map((x) => `${x.label} ${x.value}`).join(', ');
+
+  // หัวข้อที่พบปัญหามากสุด 5 อันดับ ที่เหลือรวมเป็น "อื่น ๆ"
+  const topicRows: BarRow[] = useMemo(() => {
+    const inRange = (allFindings ?? []).filter(
+      (x) => x.status !== 'cancelled' && x.reported_at.slice(0, 10) >= from && x.reported_at.slice(0, 10) <= to,
+    );
+    const counts = new Map<string, number>();
+    for (const x of inRange) counts.set(x.theme_id ?? '', (counts.get(x.theme_id ?? '') ?? 0) + 1);
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 5).map(([id, value]) => ({
+      key: id || 'none',
+      label: id ? themeLabel(themes.find((th) => th.id === id), lang) : t('chart.other'),
+      value,
+      muted: !id,
+    }));
+    const rest = sorted.slice(5).reduce((sum, [, v]) => sum + v, 0);
+    return rest ? [...top, { key: 'other', label: t('chart.other'), value: rest, muted: true }] : top;
+  }, [allFindings, from, to, themes, lang, t]);
+
+  const personRows: BarRow[] = useMemo(
+    () =>
+      ranks.slice(0, 8).map((r) => ({
+        key: r.manager.id,
+        label: managerLabel(r.manager, lang),
+        value: r.walks,
+        note: r.planned ? `${r.adherence}%` : '—',
+        mark: r.manager.id === session?.manager_id,
+      })),
+    [ranks, lang, session],
+  );
+
   if (!admin && session && !session.dashboard_enabled) {
     return (
       <div>
@@ -153,111 +225,141 @@ export default function Dashboard() {
             <TabsTrigger value="themes">{t('dash.tabThemes')}</TabsTrigger>
           </TabsList>
 
-          {/* ── ภาพรวม ─────────────────────────────────── */}
+          {/* ── ภาพรวม (กราฟ) ─────────────────────────── */}
           <TabsContent value="overview" className="space-y-4">
-            <div className="stagger grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <StatBlock
-                label={t('dash.adherence')}
-                value={myAdherence.pct}
-                unit="%"
-                tone={bandOf(myAdherence.pct)}
-                sub={`${myAdherence.done}/${myAdherence.total} ${t('plan.countPlans', { n: '' }).trim()}`}
-                hint={
-                  <InfoHint label={t('dash.adherence')}>
-                    <p className="font-medium">{t('dash.adherence')}</p>
-                    <p className="mt-1 text-muted-foreground">{t('dash.adherenceHint')}</p>
-                    <p className="num mt-2">
-                      {myAdherence.done} ÷ {myAdherence.total} × 100 = {myAdherence.pct}%
-                    </p>
-                    {myAdherence.cancelled ? (
-                      <p className="num mt-1 text-muted-foreground">
-                        {t('status.cancelled')}: {myAdherence.cancelled}
-                      </p>
-                    ) : null}
-                    {myAdherence.upcoming ? (
-                      <p className="num mt-1 text-muted-foreground">
-                        {t('dash.adherenceUpcoming')}: {myAdherence.upcoming}
-                      </p>
-                    ) : null}
-                  </InfoHint>
-                }
-              />
-              <StatBlock
-                label={t('dash.rank')}
-                value={myRank ? `#${myRank.rank}` : '—'}
-                sub={`${t('common.of')} ${ranks.length} ${t('common.people')}`}
-                tone="accent"
-                hint={
-                  <InfoHint label={t('dash.rank')}>
-                    <p className="font-medium">{t('dash.rank')}</p>
-                    <p className="mt-1 text-muted-foreground">{t('dash.rankHint')}</p>
-                    {myRank ? (
+            <div className="stagger grid gap-4 md:grid-cols-2">
+              {/* เดินตามแผน — ของฉันกับทั้งทีม */}
+              <Card>
+                <CardHeader
+                  title={t('chart.adherence')}
+                  right={
+                    <InfoHint label={t('dash.adherence')}>
+                      <p className="font-medium">{t('dash.adherence')}</p>
+                      <p className="mt-1 text-muted-foreground">{t('dash.adherenceHint')}</p>
                       <p className="num mt-2">
-                        {t('dash.walks')}: {myRank.walks} · {t('dash.adherence')}: {myRank.adherence}% ·{' '}
-                        {t('coaching.themesCovered')}: {myRank.themes}
+                        {headline.done} ÷ {headline.total} × 100 = {headline.pct}%
                       </p>
-                    ) : null}
-                  </InfoHint>
-                }
-              />
-              <StatBlock label={t('dash.walks')} value={teamWalks.length} sub={`${t('common.all')} · ${t('common.times')}`} />
-              <StatBlock
-                label={t('dash.issues')}
-                value={teamWalks.filter((r) => r.has_issue).length}
-                tone="bad"
-                sub={`${t('safety.cFound')}: ${findingStats.found}`}
-              />
+                    </InfoHint>
+                  }
+                />
+                <CardBody className="space-y-4 pt-1">
+                  <div className="flex items-end gap-3">
+                    <span className="text-[44px] font-semibold leading-none tracking-tight">
+                      {headline.total ? headline.pct : '—'}
+                      {headline.total ? <span className="ml-0.5 text-[20px] text-muted-foreground">%</span> : null}
+                    </span>
+                    <span className="pb-1 text-[12px] text-muted-foreground">
+                      {headline.total
+                        ? t('chart.adherenceSub', { done: headline.done, total: headline.total })
+                        : t('chart.noPlans')}
+                    </span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {adherenceRows.map((row) => (
+                      <div key={row.key}>
+                        <div className="mb-1 flex items-baseline justify-between text-[12px]">
+                          <span className="text-muted-foreground">{row.label}</span>
+                          <span className="font-semibold">{row.total ? `${row.pct}%` : '—'}</span>
+                        </div>
+                        <Meter
+                          pct={row.total ? row.pct : 0}
+                          tone={row.total ? bandOf(row.pct) : 'accent'}
+                          label={`${row.label} ${row.total ? `${row.pct}%` : '—'}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardBody>
+              </Card>
+
+              {/* สถานะใบแจ้งปัญหา — ก้อนเดียวแบ่งตามสถานะ */}
+              <Card>
+                <CardHeader
+                  title={t('chart.findings')}
+                  right={
+                    <Link to="/findings" className="focusable text-[12px] font-medium text-accent hover:underline">
+                      {t('chart.findingsTotal', { n: statusTotal })}
+                    </Link>
+                  }
+                />
+                <CardBody className="space-y-3 pt-1">
+                  <SegmentedBar segments={statusSegments} ariaLabel={statusAria} />
+                  {findingStats.counts.overdue ? (
+                    <Link
+                      to="/findings"
+                      className="focusable flex min-h-[40px] items-center gap-2 rounded-md border border-bad/30 bg-bad/[0.07] px-3 text-[12px] font-medium text-bad"
+                    >
+                      <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+                      {t('chart.overdue', { n: findingStats.counts.overdue })}
+                    </Link>
+                  ) : null}
+                </CardBody>
+              </Card>
             </div>
 
-            {/* ── งานความปลอดภัยที่ยังค้าง ── */}
-            <section>
-              <SectionTitle
-                right={
-                  <Link to="/findings" className="focusable text-[12px] text-accent hover:underline">
-                    {t('safety.title')}
-                  </Link>
-                }
-              >
-                {t('safety.title')}
-              </SectionTitle>
-
-              <div className="stagger mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <StatBlock
-                  label={t('safety.cOpen')}
-                  value={findingStats.counts.open}
-                  tone={findingStats.counts.open ? 'warn' : 'ok'}
-                />
-                <StatBlock
-                  label={t('safety.cOverdue')}
-                  value={findingStats.counts.overdue}
-                  tone={findingStats.counts.overdue ? 'bad' : 'ok'}
-                />
-                <StatBlock label={t('safety.cWaiting')} value={findingStats.counts.waitingVerify} tone="accent" />
-                <StatBlock
-                  label={t('safety.closeRate')}
-                  value={
-                    findingStats.counts.total
-                      ? Math.floor((findingStats.counts.closed / findingStats.counts.total) * 100)
-                      : 0
+            {/* จำนวนครั้งที่เดินรายวัน */}
+            <Card>
+              <CardHeader title={t('chart.walksByDay')} hint={label} />
+              <CardBody className="pt-1">
+                <ColumnChart
+                  columns={dayColumns}
+                  ariaLabel={t('chart.walksByDay')}
+                  summary={
+                    <>
+                      {t('chart.walksTotal', { n: teamWalks.length })} ·{' '}
+                      {t('chart.walksWithIssue', { n: teamWalks.filter((r) => r.has_issue).length })} ·{' '}
+                      <span className="font-sans">{t('chart.tapHint')}</span>
+                    </>
                   }
-                  unit="%"
-                  tone={bandOf(
-                    findingStats.counts.total
-                      ? Math.floor((findingStats.counts.closed / findingStats.counts.total) * 100)
-                      : 0,
-                  )}
-                  sub={`${findingStats.counts.closed}/${findingStats.counts.total}`}
                 />
-              </div>
+              </CardBody>
+            </Card>
 
-              {findingStats.urgent.length ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* ปัญหาที่พบตามหัวข้อ */}
+              <Card>
+                <CardHeader title={t('chart.byTopic')} hint={t('chart.byTopicHint')} />
+                <CardBody className="pt-1">
+                  {topicRows.length ? (
+                    <BarList rows={topicRows} ariaLabel={t('chart.byTopic')} />
+                  ) : (
+                    <p className="py-4 text-center text-[12px] text-muted-foreground">{t('chart.noData')}</p>
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* การเดินรายคน */}
+              <Card>
+                <CardHeader title={t('chart.byPerson')} hint={t('chart.byPersonHint')} />
+                <CardBody className="pt-1">
+                  {personRows.length ? (
+                    <BarList rows={personRows} ariaLabel={t('chart.byPerson')} />
+                  ) : (
+                    <p className="py-4 text-center text-[12px] text-muted-foreground">{t('chart.noData')}</p>
+                  )}
+                </CardBody>
+              </Card>
+            </div>
+
+            {/* งานแก้ไขที่ต้องตามก่อน */}
+            {findingStats.urgent.length ? (
+              <section>
+                <SectionTitle
+                  right={
+                    <Link to="/findings" className="focusable text-[12px] text-accent hover:underline">
+                      {t('safety.title')}
+                    </Link>
+                  }
+                >
+                  {t('safety.filterOpen')}
+                </SectionTitle>
                 <div className="space-y-2">
-                  {findingStats.urgent.map((x) => (
+                  {findingStats.urgent.slice(0, 3).map((x) => (
                     <FindingCard key={x.id} finding={x} areas={areas} managers={managers} />
                   ))}
                 </div>
-              ) : null}
-            </section>
+              </section>
+            ) : null}
 
             {/* ตารางการเดินรายบุคคล */}
             <Card>
@@ -324,43 +426,6 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
-            </Card>
-
-            {/* อันดับ */}
-            <Card>
-              <CardHeader
-                title={t('dash.rankTable')}
-                right={
-                  <Badge tone="accent" size="md">
-                    <Medal className="h-3 w-3" />
-                    {label}
-                  </Badge>
-                }
-              />
-              <CardBody className="space-y-1.5">
-                {ranks.slice(0, 8).map((row) => (
-                  <div
-                    key={row.manager.id}
-                    className={cn(
-                      'flex items-center gap-3 rounded-md border px-3 py-2',
-                      row.manager.id === session?.manager_id && 'border-accent bg-accent/10',
-                    )}
-                  >
-                    <span className="num w-6 text-center text-[13px] font-semibold text-muted-foreground">
-                      {row.rank}
-                    </span>
-                    <Avatar name={managerLabel(row.manager, lang)} src={row.manager.avatar_url} seed={row.manager.id} size={28} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-medium">{managerLabel(row.manager, lang)}</div>
-                      <div className="num text-[10px] text-muted-foreground">{row.manager.department}</div>
-                    </div>
-                    <div className="num text-right">
-                      <div className="text-[13px] font-semibold">{row.walks}</div>
-                      <div className="text-[10px] text-muted-foreground">{row.adherence}%</div>
-                    </div>
-                  </div>
-                ))}
-              </CardBody>
             </Card>
           </TabsContent>
 
