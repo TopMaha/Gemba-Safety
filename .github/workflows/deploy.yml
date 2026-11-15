@@ -56,9 +56,33 @@ jobs:
           fi
           # เคยวางข้อความอธิบายลงไปแทนตัวโทเคน — build ผ่าน แต่ Worker ตอบ 401 ทุกคำขอ
           # หน้าเว็บบน GitHub Pages จึงซิงก์ไม่ได้เลยโดยไม่มีใครรู้ (แบบเดียวกับที่ QC Audit เคยเจอ)
-          if ! printf '%s' "$VITE_AUTH_TOKEN" | LC_ALL=C grep -qE '^[!-~]{16,}$'; then
-            echo "::error::secret VITE_AUTH_TOKEN ไม่ใช่โทเคน (มีช่องว่าง อักษรไทย หรือสั้นเกินไป)"
+          #
+          # บอกให้ชัดว่าค่าที่วางไว้ผิดตรงไหน โดยไม่พิมพ์ตัวค่าออกมา (log ของ repo สาธารณะใครก็เปิดดูได้)
+          # ลายนิ้วมือคือ 8 ตัวแรกของ sha256 — เทียบกับเครื่องตัวเองได้ด้วย
+          #   grep '^VITE_AUTH_TOKEN=' .env.local | cut -d= -f2- | tr -d '\r\n' | sha256sum | cut -c1-8
+          tok="$VITE_AUTH_TOKEN"
+          count() { printf '%s' "$tok" | LC_ALL=C tr -cd "$1" | wc -c; }
+          bytes=$(printf '%s' "$tok" | wc -c)
+          lines=$(printf '%s' "$tok" | awk 'END { print NR }')
+          spaces=$(count ' \t')
+          crs=$(count '\r')
+          lfs=$(count '\n')
+          nonascii=$(printf '%s' "$tok" | LC_ALL=C tr -d '\000-\177' | wc -c)
+          fp=$(printf '%s' "$tok" | sha256sum | cut -c1-8)
+          echo "VITE_AUTH_TOKEN (ไม่แสดงค่า): ยาว $bytes ไบต์ · $lines บรรทัด · ช่องว่าง/แท็บ $spaces · CR $crs · ขึ้นบรรทัดใหม่ $lfs · อักษรนอก ASCII $nonascii ไบต์ · ลายนิ้วมือ $fp"
+
+          problems=""
+          [ "$spaces" -gt 0 ] && problems="$problems มีช่องว่างหรือแท็บ $spaces ตัว ·"
+          [ "$crs" -gt 0 ] || [ "$lfs" -gt 0 ] && problems="$problems มีการขึ้นบรรทัดใหม่ ·"
+          [ "$nonascii" -gt 0 ] && problems="$problems มีอักษรนอก ASCII (เช่นภาษาไทย) $nonascii ไบต์ ·"
+          case "$tok" in VITE_AUTH_TOKEN=*) problems="$problems ขึ้นต้นด้วยชื่อตัวแปร VITE_AUTH_TOKEN= ·" ;; esac
+          case "$tok" in \"*|\'*) problems="$problems มีเครื่องหมายคำพูดครอบ ·" ;; esac
+          [ "$bytes" -lt 16 ] && problems="$problems สั้นเกินไป ($bytes ไบต์ ต้องอย่างน้อย 16) ·"
+          if [ -n "$problems" ] || ! printf '%s' "$tok" | LC_ALL=C grep -qE '^[!-~]{16,}$'; then
+            echo "::error::secret VITE_AUTH_TOKEN ไม่ใช่โทเคน:${problems:- มีอักขระที่ใช้ในโทเคนไม่ได้}"
             echo "วางเฉพาะตัวโทเคนที่อยู่หลัง VITE_AUTH_TOKEN= ใน .env.local — ไม่ใส่ชื่อตัวแปร เครื่องหมายคำพูด หรือข้อความอื่น"
+            echo "ต้องตั้งที่ Settings -> Secrets and variables -> Actions -> แท็บ Secrets -> Repository secrets ของ repo นี้"
+            echo "(Variables หรือ Environment secrets ของ github-pages ใช้ไม่ได้ เพราะขั้น build ไม่ได้อ่านจากที่นั่น)"
             exit 1
           fi
 
